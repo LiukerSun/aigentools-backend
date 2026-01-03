@@ -10,6 +10,8 @@ definitions:
         type: integer
       name:
         type: string
+      parameters:
+        $ref: '#/definitions/models.JSON'
       status:
         $ref: '#/definitions/models.AIModelStatus'
       updated_at:
@@ -34,6 +36,8 @@ definitions:
         type: string
       name:
         type: string
+      parameters:
+        $ref: '#/definitions/models.JSON'
       status:
         allOf:
         - $ref: '#/definitions/models.AIModelStatus'
@@ -44,6 +48,22 @@ definitions:
     required:
     - name
     - status
+    type: object
+  ai_model.UpdateModelRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      parameters:
+        $ref: '#/definitions/models.JSON'
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AIModelStatus'
+        enum:
+        - open
+        - closed
+        - draft
     type: object
   ai_model.UpdateStatusRequest:
     properties:
@@ -87,6 +107,9 @@ definitions:
     - AIModelStatusOpen
     - AIModelStatusClosed
     - AIModelStatusDraft
+  models.JSON:
+    additionalProperties: true
+    type: object
   models.TransactionType:
     enum:
     - admin_adjustment
@@ -717,6 +740,54 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       summary: Get list of AI models
+      tags:
+      - models
+  /models/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update AI model details. Admin only.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Model details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ai_model.UpdateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/ai_model.AIModelListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Update an existing AI model
       tags:
       - models
   /models/{id}/status:

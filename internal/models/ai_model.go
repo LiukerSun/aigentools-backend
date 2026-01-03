@@ -17,4 +17,5 @@ type AIModel struct {
 	Name        string        `gorm:"index;not null" json:"name"`
 	Description string        `json:"description"`
 	Status      AIModelStatus `gorm:"index;not null;default:'draft'" json:"status"`
+	Parameters  JSON          `gorm:"type:jsonb;not null;default:'{}'" json:"parameters"`
 }

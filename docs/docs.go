@@ -824,6 +824,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/models/{id}": {
+            "put": {
+                "description": "Update AI model details. Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "models"
+                ],
+                "summary": "Update an existing AI model",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Model ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Model details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ai_model.UpdateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/ai_model.AIModelListItem"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/models/{id}/status": {
             "patch": {
                 "description": "Update the status of an AI model. Admin only.",
@@ -906,6 +983,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "parameters": {
+                    "$ref": "#/definitions/models.JSON"
+                },
                 "status": {
                     "$ref": "#/definitions/models.AIModelStatus"
                 },
@@ -946,6 +1026,35 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "parameters": {
+                    "$ref": "#/definitions/models.JSON"
+                },
+                "status": {
+                    "enum": [
+                        "open",
+                        "closed",
+                        "draft"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.AIModelStatus"
+                        }
+                    ]
+                }
+            }
+        },
+        "ai_model.UpdateModelRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "$ref": "#/definitions/models.JSON"
                 },
                 "status": {
                     "enum": [
@@ -1023,6 +1132,10 @@ const docTemplate = `{
                 "AIModelStatusClosed",
                 "AIModelStatusDraft"
             ]
+        },
+        "models.JSON": {
+            "type": "object",
+            "additionalProperties": true
         },
         "models.TransactionType": {
             "type": "string",

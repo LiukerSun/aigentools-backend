@@ -86,6 +86,7 @@ func GetModels(c *gin.Context) {
 			Name:        m.Name,
 			Description: m.Description,
 			Status:      m.Status,
+			Parameters:  m.Parameters,
 			CreatedAt:   m.CreatedAt,
 			UpdatedAt:   m.UpdatedAt,
 		})
@@ -191,6 +192,11 @@ func CreateModel(c *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		Status:      req.Status,
+		Parameters:  req.Parameters,
+	}
+
+	if model.Parameters == nil {
+		model.Parameters = make(models.JSON)
 	}
 
 	// Log sensitive operation
@@ -206,9 +212,90 @@ func CreateModel(c *gin.Context) {
 		Name:        model.Name,
 		Description: model.Description,
 		Status:      model.Status,
+		Parameters:  model.Parameters,
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
 	}
 
 	c.JSON(http.StatusCreated, utils.NewSuccessResponse("Model created successfully", responseItem))
+}
+
+// UpdateModel godoc
+// @Summary Update an existing AI model
+// @Description Update AI model details. Admin only.
+// @Tags models
+// @Accept json
+// @Produce json
+// @Param id path int true "Model ID"
+// @Param request body UpdateModelRequest true "Model details"
+// @Success 200 {object} utils.Response{data=AIModelListItem}
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /models/{id} [put]
+func UpdateModel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id < 1 {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid model ID"))
+		return
+	}
+
+	var req UpdateModelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	userVal, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.NewErrorResponse(http.StatusUnauthorized, "User not authenticated"))
+		return
+	}
+	user := userVal.(models.User)
+
+	if user.Role != "admin" {
+		c.JSON(http.StatusForbidden, utils.NewErrorResponse(http.StatusForbidden, "Only admin can update models"))
+		return
+	}
+
+	model, err := services.GetAIModelByID(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "Model not found"))
+		return
+	}
+
+	// Update fields if provided
+	if req.Name != "" {
+		model.Name = req.Name
+	}
+	if req.Description != "" {
+		model.Description = req.Description
+	}
+	if req.Status != "" {
+		model.Status = req.Status
+	}
+	if req.Parameters != nil {
+		model.Parameters = req.Parameters
+	}
+
+	log.Printf("[SECURITY AUDIT] User %s (ID: %d) is updating model %d", user.Username, user.ID, id)
+
+	if err := services.UpdateAIModel(model); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, "Failed to update model"))
+		return
+	}
+
+	responseItem := AIModelListItem{
+		ID:          model.ID,
+		Name:        model.Name,
+		Description: model.Description,
+		Status:      model.Status,
+		Parameters:  model.Parameters,
+		CreatedAt:   model.CreatedAt,
+		UpdatedAt:   model.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Model updated successfully", responseItem))
 }

@@ -12,6 +12,7 @@ func RegisterRoutes(router *gin.RouterGroup) {
 	{
 		modelGroup.GET("", GetModels)
 		modelGroup.PATCH("/:id/status", UpdateModelStatus)
+		modelGroup.PUT("/:id", UpdateModel)
 		modelGroup.POST("/create", CreateModel)
 	}
 }
