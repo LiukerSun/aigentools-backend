@@ -33,6 +33,37 @@ func CurrentUser(c *gin.Context) {
 		return
 	}
 
+	// Calculate credit info based on "Total = Balance + CreditLimit" model
+	// This supports both prepaid (Balance > 0) and postpaid/overdraft (Balance < 0) scenarios.
+
+	var total, available, used, usagePercentage float64
+
+	// Available = Balance + CreditLimit
+	// This represents the actual purchasing power.
+	available = u.Balance + u.CreditLimit
+
+	// Total = Max(Balance, 0) + CreditLimit
+	// This represents the total capacity (Own Funds + Credit Line).
+	if u.Balance > 0 {
+		total = u.Balance + u.CreditLimit
+	} else {
+		total = u.CreditLimit
+	}
+
+	// Used = Total - Available
+	used = total - available
+
+	if total > 0 {
+		usagePercentage = (used / total) * 100
+	}
+
+	creditInfo := &CreditInfo{
+		Total:           total,
+		Available:       available,
+		Used:            used,
+		UsagePercentage: usagePercentage,
+	}
+
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("User information retrieved successfully", UserResponse{
 		ID:            u.ID,
 		Username:      u.Username,
@@ -40,6 +71,8 @@ func CurrentUser(c *gin.Context) {
 		IsActive:      u.IsActive,
 		ActivatedAt:   u.ActivatedAt,
 		DeactivatedAt: u.DeactivatedAt,
+		CreditLimit:   u.CreditLimit,
+		Credit:        creditInfo,
 		Token:         token,
 	}))
 }

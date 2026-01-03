@@ -13,4 +13,6 @@ type User struct {
 	IsActive      bool       `gorm:"default:true"`
 	ActivatedAt   *time.Time `json:"activated_at,omitempty"`
 	DeactivatedAt *time.Time `json:"deactivated_at,omitempty"`
+	Balance       float64    `gorm:"default:0;type:decimal(20,8)"`
+	CreditLimit   float64    `gorm:"default:0;type:decimal(20,8)"`
 }

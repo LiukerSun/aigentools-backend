@@ -20,8 +20,31 @@ definitions:
     - password
     - username
     type: object
+  user.BalanceAdjustmentRequest:
+    properties:
+      amount:
+        type: number
+      reason:
+        type: string
+    required:
+    - amount
+    - reason
+    type: object
+  user.CreditInfo:
+    properties:
+      available:
+        type: number
+      total:
+        type: number
+      usagePercentage:
+        type: number
+      used:
+        type: number
+    type: object
   user.UpdateUserRequest:
     properties:
+      creditLimit:
+        type: number
       is_active:
         type: boolean
       password:
@@ -39,8 +62,12 @@ definitions:
     properties:
       activated_at:
         type: string
+      balance:
+        type: number
       created_at:
         type: string
+      creditLimit:
+        type: number
       deactivated_at:
         type: string
       id:
@@ -71,6 +98,10 @@ definitions:
     properties:
       activated_at:
         type: string
+      credit:
+        $ref: '#/definitions/user.CreditInfo'
+      creditLimit:
+        type: number
       deactivated_at:
         type: string
       id:
@@ -222,6 +253,60 @@ paths:
       security:
       - Bearer: []
       summary: Update a user
+      tags:
+      - admin
+  /admin/users/{id}/balance:
+    post:
+      consumes:
+      - application/json
+      description: Increase or decrease user balance. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Balance adjustment details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/user.BalanceAdjustmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Adjust user balance
       tags:
       - admin
   /auth/login:

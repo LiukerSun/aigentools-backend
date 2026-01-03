@@ -120,6 +120,10 @@ func UpdateUser(id uint, updates map[string]interface{}, operator string) (*mode
 		}
 	}
 
+	if creditLimit, ok := updates["credit_limit"].(float64); ok {
+		updates["credit_limit"] = creditLimit
+	}
+
 	// Optimistic Lock Check
 	currentVersion := user.Version
 	updates["version"] = currentVersion + 1
@@ -152,6 +156,88 @@ func UpdateUser(id uint, updates map[string]interface{}, operator string) (*mode
 
 	// Fetch updated user to return full object
 	database.DB.First(&user, id)
+
+	return &user, nil
+}
+
+// AdjustBalance updates user's balance and records the transaction.
+func AdjustBalance(userID uint, amount float64, reason string, operator string) (*models.User, error) {
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var user models.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	balanceBefore := user.Balance
+	balanceAfter := balanceBefore + amount
+
+	// Update user balance and version
+	currentVersion := user.Version
+	updates := map[string]interface{}{
+		"balance": balanceAfter,
+		"version": currentVersion + 1,
+	}
+
+	// Status management logic
+	if balanceAfter == 0 {
+		updates["is_active"] = false
+		now := time.Now()
+		updates["deactivated_at"] = &now
+	} else if balanceBefore == 0 && balanceAfter != 0 {
+		// Only if it was 0 and now is not 0, we might want to activate?
+		// Requirement: "当用户额度≠0时，用户激活状态不受影响（保持原状态）"
+		// So we don't auto-activate, we only auto-deactivate if 0.
+	}
+
+	// Apply updates with optimistic lock
+	result := tx.Model(&user).Where("version = ?", currentVersion).Updates(updates)
+	if result.Error != nil {
+		tx.Rollback()
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return nil, ErrOptimisticLock
+	}
+
+	// Record transaction
+	transaction := models.Transaction{
+		UserID:        userID,
+		Amount:        amount,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter,
+		Reason:        reason,
+		Operator:      operator,
+		CreatedAt:     time.Now(),
+	}
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Commit
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	// Invalidate cache
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("user:%d", userID)
+		database.RedisClient.Del(database.Ctx, cacheKey)
+	}
+
+	// Fetch updated user
+	database.DB.First(&user, userID)
 
 	return &user, nil
 }

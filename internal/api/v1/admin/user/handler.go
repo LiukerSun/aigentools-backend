@@ -4,6 +4,7 @@ import (
 	"aigentools-backend/internal/models"
 	"aigentools-backend/internal/services"
 	"aigentools-backend/internal/utils"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -18,6 +19,8 @@ type UserListItem struct {
 	IsActive      bool       `json:"is_active"`
 	ActivatedAt   *time.Time `json:"activated_at,omitempty"`
 	DeactivatedAt *time.Time `json:"deactivated_at,omitempty"`
+	Balance       float64    `json:"balance"`
+	CreditLimit   float64    `json:"creditLimit"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
@@ -109,6 +112,8 @@ func ListUsers(c *gin.Context) {
 			IsActive:      u.IsActive,
 			ActivatedAt:   u.ActivatedAt,
 			DeactivatedAt: u.DeactivatedAt,
+			Balance:       u.Balance,
+			CreditLimit:   u.CreditLimit,
 			CreatedAt:     u.CreatedAt,
 			UpdatedAt:     u.UpdatedAt,
 		})
@@ -124,10 +129,11 @@ func ListUsers(c *gin.Context) {
 
 // UpdateUserRequest represents the request body for updating a user
 type UpdateUserRequest struct {
-	Username *string `json:"username,omitempty"`
-	Password *string `json:"password,omitempty" binding:"omitempty,min=6"`
-	Role     *string `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
-	IsActive *bool   `json:"is_active,omitempty"`
+	Username    *string  `json:"username,omitempty"`
+	Password    *string  `json:"password,omitempty" binding:"omitempty,min=6"`
+	Role        *string  `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
+	IsActive    *bool    `json:"is_active,omitempty"`
+	CreditLimit *float64 `json:"creditLimit,omitempty"`
 }
 
 // UpdateUser godoc
@@ -173,6 +179,9 @@ func UpdateUser(c *gin.Context) {
 	if req.IsActive != nil {
 		updates["is_active"] = *req.IsActive
 	}
+	if req.CreditLimit != nil {
+		updates["credit_limit"] = *req.CreditLimit
+	}
 
 	if len(updates) == 0 {
 		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "No fields to update"))
@@ -207,9 +216,83 @@ func UpdateUser(c *gin.Context) {
 		IsActive:      updatedUser.IsActive,
 		ActivatedAt:   updatedUser.ActivatedAt,
 		DeactivatedAt: updatedUser.DeactivatedAt,
+		Balance:       updatedUser.Balance,
+		CreditLimit:   updatedUser.CreditLimit,
 		CreatedAt:     updatedUser.CreatedAt,
 		UpdatedAt:     updatedUser.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("User updated successfully", response))
+}
+
+// BalanceAdjustmentRequest represents the request body for adjusting user balance
+type BalanceAdjustmentRequest struct {
+	Amount float64 `json:"amount" binding:"required"`
+	Reason string  `json:"reason" binding:"required"`
+}
+
+// AdjustBalance godoc
+// @Summary Adjust user balance
+// @Description Increase or decrease user balance. Admin only.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "User ID"
+// @Param body body BalanceAdjustmentRequest true "Balance adjustment details"
+// @Success 200 {object} utils.Response{data=UserListItem}
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 409 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /admin/users/{id}/balance [post]
+func AdjustBalance(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid user ID"))
+		return
+	}
+
+	var req BalanceAdjustmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		return
+	}
+
+	operator := "unknown"
+	if userVal, exists := c.Get("user"); exists {
+		if u, ok := userVal.(models.User); ok {
+			operator = u.Username
+		}
+	}
+
+	updatedUser, err := services.AdjustBalance(uint(id), req.Amount, req.Reason, operator)
+	if err != nil {
+		if err == services.ErrUserNotFound {
+			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "User not found"))
+			return
+		}
+		if err == services.ErrOptimisticLock {
+			c.JSON(http.StatusConflict, utils.NewErrorResponse(http.StatusConflict, err.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, fmt.Sprintf("Failed to adjust balance: %v", err)))
+		return
+	}
+
+	response := UserListItem{
+		ID:            updatedUser.ID,
+		Username:      updatedUser.Username,
+		Role:          updatedUser.Role,
+		IsActive:      updatedUser.IsActive,
+		ActivatedAt:   updatedUser.ActivatedAt,
+		DeactivatedAt: updatedUser.DeactivatedAt,
+		Balance:       updatedUser.Balance,
+		CreatedAt:     updatedUser.CreatedAt,
+		UpdatedAt:     updatedUser.UpdatedAt,
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Balance adjusted successfully", response))
 }

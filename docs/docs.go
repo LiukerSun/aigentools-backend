@@ -207,6 +207,94 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/users/{id}/balance": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Increase or decrease user balance. Admin only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Adjust user balance",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Balance adjustment details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/user.BalanceAdjustmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/user.UserListItem"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Log in a user with a username and password",
@@ -447,9 +535,44 @@ const docTemplate = `{
                 }
             }
         },
+        "user.BalanceAdjustmentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "reason"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "user.CreditInfo": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "usagePercentage": {
+                    "type": "number"
+                },
+                "used": {
+                    "type": "number"
+                }
+            }
+        },
         "user.UpdateUserRequest": {
             "type": "object",
             "properties": {
+                "creditLimit": {
+                    "type": "number"
+                },
                 "is_active": {
                     "type": "boolean"
                 },
@@ -475,8 +598,14 @@ const docTemplate = `{
                 "activated_at": {
                     "type": "string"
                 },
+                "balance": {
+                    "type": "number"
+                },
                 "created_at": {
                     "type": "string"
+                },
+                "creditLimit": {
+                    "type": "number"
                 },
                 "deactivated_at": {
                     "type": "string"
@@ -523,6 +652,12 @@ const docTemplate = `{
             "properties": {
                 "activated_at": {
                     "type": "string"
+                },
+                "credit": {
+                    "$ref": "#/definitions/user.CreditInfo"
+                },
+                "creditLimit": {
+                    "type": "number"
                 },
                 "deactivated_at": {
                     "type": "string"
