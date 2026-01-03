@@ -12,11 +12,14 @@ import (
 )
 
 type UserListItem struct {
-	ID        uint      `json:"id"`
-	Username  string    `json:"username"`
-	Role      string    `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID            uint       `json:"id"`
+	Username      string     `json:"username"`
+	Role          string     `json:"role"`
+	IsActive      bool       `json:"is_active"`
+	ActivatedAt   *time.Time `json:"activated_at,omitempty"`
+	DeactivatedAt *time.Time `json:"deactivated_at,omitempty"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type UserListResponse struct {
@@ -34,6 +37,9 @@ type UserListResponse struct {
 // @Security Bearer
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(20)
+// @Param is_active query bool false "Filter by active status"
+// @Param created_after query string false "Filter by creation time (start) - RFC3339"
+// @Param created_before query string false "Filter by creation time (end) - RFC3339"
 // @Success 200 {object} utils.Response{data=UserListResponse}
 // @Failure 400 {object} utils.Response
 // @Failure 401 {object} utils.Response
@@ -56,7 +62,39 @@ func ListUsers(c *gin.Context) {
 		return
 	}
 
-	users, total, err := services.FindUsers(page, limit)
+	filter := services.UserFilter{
+		Page:  page,
+		Limit: limit,
+	}
+
+	if isActiveStr, exists := c.GetQuery("is_active"); exists {
+		isActive, err := strconv.ParseBool(isActiveStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid is_active parameter"))
+			return
+		}
+		filter.IsActive = &isActive
+	}
+
+	if createdAfterStr, exists := c.GetQuery("created_after"); exists {
+		createdAfter, err := time.Parse(time.RFC3339, createdAfterStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid created_after parameter format"))
+			return
+		}
+		filter.CreatedAfter = &createdAfter
+	}
+
+	if createdBeforeStr, exists := c.GetQuery("created_before"); exists {
+		createdBefore, err := time.Parse(time.RFC3339, createdBeforeStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid created_before parameter format"))
+			return
+		}
+		filter.CreatedBefore = &createdBefore
+	}
+
+	users, total, err := services.FindUsers(filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch users"))
 		return
@@ -65,11 +103,14 @@ func ListUsers(c *gin.Context) {
 	var userItems []UserListItem
 	for _, u := range users {
 		userItems = append(userItems, UserListItem{
-			ID:        u.ID,
-			Username:  u.Username,
-			Role:      u.Role,
-			CreatedAt: u.CreatedAt,
-			UpdatedAt: u.UpdatedAt,
+			ID:            u.ID,
+			Username:      u.Username,
+			Role:          u.Role,
+			IsActive:      u.IsActive,
+			ActivatedAt:   u.ActivatedAt,
+			DeactivatedAt: u.DeactivatedAt,
+			CreatedAt:     u.CreatedAt,
+			UpdatedAt:     u.UpdatedAt,
 		})
 	}
 
@@ -86,6 +127,7 @@ type UpdateUserRequest struct {
 	Username *string `json:"username,omitempty"`
 	Password *string `json:"password,omitempty" binding:"omitempty,min=6"`
 	Role     *string `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
+	IsActive *bool   `json:"is_active,omitempty"`
 }
 
 // UpdateUser godoc
@@ -128,6 +170,9 @@ func UpdateUser(c *gin.Context) {
 	if req.Role != nil {
 		updates["role"] = *req.Role
 	}
+	if req.IsActive != nil {
+		updates["is_active"] = *req.IsActive
+	}
 
 	if len(updates) == 0 {
 		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "No fields to update"))
@@ -156,11 +201,14 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	response := UserListItem{
-		ID:        updatedUser.ID,
-		Username:  updatedUser.Username,
-		Role:      updatedUser.Role,
-		CreatedAt: updatedUser.CreatedAt,
-		UpdatedAt: updatedUser.UpdatedAt,
+		ID:            updatedUser.ID,
+		Username:      updatedUser.Username,
+		Role:          updatedUser.Role,
+		IsActive:      updatedUser.IsActive,
+		ActivatedAt:   updatedUser.ActivatedAt,
+		DeactivatedAt: updatedUser.DeactivatedAt,
+		CreatedAt:     updatedUser.CreatedAt,
+		UpdatedAt:     updatedUser.UpdatedAt,
 	}
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("User updated successfully", response))

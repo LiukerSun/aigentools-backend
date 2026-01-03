@@ -22,6 +22,8 @@ definitions:
     type: object
   user.UpdateUserRequest:
     properties:
+      is_active:
+        type: boolean
       password:
         minLength: 6
         type: string
@@ -35,10 +37,16 @@ definitions:
     type: object
   user.UserListItem:
     properties:
+      activated_at:
+        type: string
       created_at:
+        type: string
+      deactivated_at:
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       role:
         type: string
       updated_at:
@@ -61,8 +69,14 @@ definitions:
     type: object
   user.UserResponse:
     properties:
+      activated_at:
+        type: string
+      deactivated_at:
+        type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       role:
         type: string
       token:
@@ -111,6 +125,18 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      - description: Filter by creation time (start) - RFC3339
+        in: query
+        name: created_after
+        type: string
+      - description: Filter by creation time (end) - RFC3339
+        in: query
+        name: created_before
+        type: string
       produces:
       - application/json
       responses:

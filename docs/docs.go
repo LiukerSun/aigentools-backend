@@ -53,6 +53,24 @@ const docTemplate = `{
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by creation time (start) - RFC3339",
+                        "name": "created_after",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by creation time (end) - RFC3339",
+                        "name": "created_before",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -432,6 +450,9 @@ const docTemplate = `{
         "user.UpdateUserRequest": {
             "type": "object",
             "properties": {
+                "is_active": {
+                    "type": "boolean"
+                },
                 "password": {
                     "type": "string",
                     "minLength": 6
@@ -451,11 +472,20 @@ const docTemplate = `{
         "user.UserListItem": {
             "type": "object",
             "properties": {
+                "activated_at": {
+                    "type": "string"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "deactivated_at": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "role": {
                     "type": "string"
@@ -491,8 +521,17 @@ const docTemplate = `{
         "user.UserResponse": {
             "type": "object",
             "properties": {
+                "activated_at": {
+                    "type": "string"
+                },
+                "deactivated_at": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
                 },
                 "role": {
                     "type": "string"

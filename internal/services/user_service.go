@@ -43,18 +43,38 @@ func FindUserByID(userID uint) (models.User, error) {
 	return user, nil
 }
 
-// FindUsers retrieves a paginated list of users.
-func FindUsers(page, limit int) ([]models.User, int64, error) {
+// UserFilter defines criteria for filtering users
+type UserFilter struct {
+	IsActive      *bool
+	CreatedAfter  *time.Time
+	CreatedBefore *time.Time
+	Page          int
+	Limit         int
+}
+
+// FindUsers retrieves a paginated list of users with optional filtering.
+func FindUsers(filter UserFilter) ([]models.User, int64, error) {
 	var users []models.User
 	var total int64
 
-	offset := (page - 1) * limit
+	query := database.DB.Model(&models.User{})
 
-	if err := database.DB.Model(&models.User{}).Count(&total).Error; err != nil {
+	if filter.IsActive != nil {
+		query = query.Where("is_active = ?", *filter.IsActive)
+	}
+	if filter.CreatedAfter != nil {
+		query = query.Where("created_at >= ?", *filter.CreatedAfter)
+	}
+	if filter.CreatedBefore != nil {
+		query = query.Where("created_at <= ?", *filter.CreatedBefore)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	if err := database.DB.Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	offset := (filter.Page - 1) * filter.Limit
+	if err := query.Limit(filter.Limit).Offset(offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -87,6 +107,17 @@ func UpdateUser(id uint, updates map[string]interface{}, operator string) (*mode
 			return nil, err
 		}
 		updates["password"] = string(hashedPassword)
+	}
+
+	// Status handling
+	if isActive, ok := updates["is_active"].(bool); ok {
+		now := time.Now()
+		if isActive {
+			updates["activated_at"] = &now
+			updates["deactivated_at"] = nil
+		} else {
+			updates["deactivated_at"] = &now
+		}
 	}
 
 	// Optimistic Lock Check

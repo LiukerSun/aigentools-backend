@@ -34,9 +34,12 @@ func CurrentUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("User information retrieved successfully", UserResponse{
-		ID:       u.ID,
-		Username: u.Username,
-		Role:     u.Role,
-		Token:    token,
+		ID:            u.ID,
+		Username:      u.Username,
+		Role:          u.Role,
+		IsActive:      u.IsActive,
+		ActivatedAt:   u.ActivatedAt,
+		DeactivatedAt: u.DeactivatedAt,
+		Token:         token,
 	}))
 }
