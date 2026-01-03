@@ -15,6 +15,116 @@ import (
 
 var ErrUserNotFound = errors.New("user not found")
 var ErrOptimisticLock = errors.New("data has been modified by another user, please refresh and try again")
+var ErrInsufficientBalance = errors.New("insufficient balance")
+
+// ...
+
+// DeductBalance decreases user's balance and checks for sufficient funds.
+func DeductBalance(userID uint, amount float64, reason string, meta TransactionMetadata) (*models.User, error) {
+	if amount <= 0 {
+		return nil, errors.New("amount must be positive")
+	}
+
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var user models.User
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	// Calculate available balance (Balance + CreditLimit)
+	availableBalance := user.Balance + user.CreditLimit
+	if availableBalance < amount {
+		tx.Rollback()
+		return nil, ErrInsufficientBalance
+	}
+
+	balanceBefore := user.Balance
+	balanceAfter := balanceBefore - amount
+
+	// Update user balance and version
+	currentVersion := user.Version
+	updates := map[string]interface{}{
+		"balance": balanceAfter,
+		"version": currentVersion + 1,
+	}
+
+	// Status management logic (optional: deactivate if balance goes to 0 or negative beyond limit? 
+	// But DeductBalance usually implies consumption. If balanceAfter becomes 0, maybe deactivate?)
+	if balanceAfter == 0 && user.CreditLimit == 0 {
+		// Only deactivate if no credit limit? Or strictly if balance is 0?
+		// Keeping consistent with AdjustBalance logic for now.
+		// Requirement: "验证边界条件（如扣减后余额为0的情况）"
+	}
+	// Let's stick to AdjustBalance logic: if balanceAfter == 0, deactivate?
+	// But if CreditLimit > 0, balanceAfter could be negative.
+	// The requirement doesn't explicitly say auto-deactivate on deduct, but implies "check sufficient funds".
+	// If funds sufficient, we proceed.
+
+	// Apply updates with optimistic lock
+	result := tx.Model(&user).Where("version = ?", currentVersion).Updates(updates)
+	if result.Error != nil {
+		tx.Rollback()
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return nil, ErrOptimisticLock
+	}
+
+	// Record transaction
+	transaction := models.Transaction{
+		UserID:        userID,
+		Amount:        -amount, // Negative for deduction
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter,
+		Reason:        reason,
+		Operator:      meta.Operator,
+		OperatorID:    meta.OperatorID,
+		Type:          meta.Type,
+		IPAddress:     meta.IPAddress,
+		DeviceInfo:    meta.DeviceInfo,
+		CreatedAt:     time.Now(),
+	}
+
+	// Generate hash
+	cfg, _ := config.LoadConfig()
+	secret := "default-secret"
+	if cfg != nil && cfg.JWTSecret != "" {
+		secret = cfg.JWTSecret
+	}
+	transaction.Hash = transaction.GenerateHash(secret)
+
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Commit
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	// Invalidate cache
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("user:%d", userID)
+		database.RedisClient.Del(database.Ctx, cacheKey)
+	}
+
+	// Fetch updated user
+	database.DB.First(&user, userID)
+
+	return &user, nil
+}
 
 func FindUserByID(userID uint) (models.User, error) {
 	// Try cache

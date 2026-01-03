@@ -284,6 +284,120 @@ func TestAdjustBalance(t *testing.T) {
 	}
 }
 
+func TestDeductBalance(t *testing.T) {
+	setupTestDB()
+	gin.SetMode(gin.TestMode)
+
+	// Seed user with balance and credit limit
+	seedUser := models.User{
+		Username:    "deduct_user",
+		Role:        "user",
+		Password:    "password",
+		Version:     1,
+		IsActive:    true,
+		Balance:     100.0,
+		CreditLimit: 50.0,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	database.DB.Create(&seedUser)
+
+	tests := []struct {
+		name           string
+		userID         string
+		body           string
+		expectedStatus int
+		checkResponse  func(t *testing.T, body []byte)
+	}{
+		{
+			name:           "Success Deduction within Balance",
+			userID:         strconv.Itoa(int(seedUser.ID)),
+			body:           `{"amount": 50.0, "reason": "fee"}`,
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, body []byte) {
+				var resp struct {
+					Code int               `json:"status"`
+					Data user.UserListItem `json:"data"`
+				}
+				json.Unmarshal(body, &resp)
+				assert.Equal(t, 50.0, resp.Data.Balance) // 100 - 50 = 50
+				
+				// Verify Transaction
+				var trans models.Transaction
+				database.DB.Last(&trans)
+				assert.Equal(t, -50.0, trans.Amount)
+				assert.Equal(t, 100.0, trans.BalanceBefore)
+				assert.Equal(t, 50.0, trans.BalanceAfter)
+			},
+		},
+		{
+			name:           "Success Deduction using Credit",
+			userID:         strconv.Itoa(int(seedUser.ID)),
+			body:           `{"amount": 120.0, "reason": "large fee"}`,
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, body []byte) {
+				var resp struct {
+					Code int               `json:"status"`
+					Data user.UserListItem `json:"data"`
+				}
+				json.Unmarshal(body, &resp)
+				assert.Equal(t, -20.0, resp.Data.Balance) // 100 - 120 = -20
+				// Available = Balance + Limit = -20 + 50 = 30 (Valid)
+			},
+		},
+		{
+			name:           "Insufficient Balance",
+			userID:         strconv.Itoa(int(seedUser.ID)),
+			body:           `{"amount": 200.0, "reason": "too much"}`, // 100 + 50 = 150 < 200
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, body []byte) {
+				assert.Contains(t, string(body), "Insufficient balance")
+			},
+		},
+		{
+			name:           "Negative Amount",
+			userID:         strconv.Itoa(int(seedUser.ID)),
+			body:           `{"amount": -10.0}`,
+			expectedStatus: http.StatusBadRequest,
+			checkResponse: func(t *testing.T, body []byte) {
+				assert.Contains(t, string(body), "Amount must be positive")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset user state
+			database.DB.Exec("DELETE FROM users")
+			database.DB.Exec("DELETE FROM transactions")
+			
+			currentSeed := seedUser
+			currentSeed.ID = 0 // Let GORM assign new ID
+			database.DB.Create(&currentSeed)
+			targetID := strconv.Itoa(int(currentSeed.ID))
+
+			r := gin.New()
+			r.Use(func(c *gin.Context) {
+				c.Set("user", models.User{Username: "admin_tester", ID: 1})
+				c.Next()
+			})
+			r.PUT("/admin/users/:id/balance", user.DeductBalance)
+
+			req, _ := http.NewRequest(http.MethodPut, "/admin/users/"+targetID+"/balance", bytes.NewBufferString(tt.body))
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Logf("Expected status %d, got %d. Body: %s", tt.expectedStatus, w.Code, w.Body.String())
+			}
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, w.Body.Bytes())
+			}
+		})
+	}
+}
+
 func TestUpdateUser(t *testing.T) {
 	setupTestDB()
 	gin.SetMode(gin.TestMode)
