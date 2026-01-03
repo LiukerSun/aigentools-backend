@@ -146,8 +146,14 @@ definitions:
       reason:
         description: 'Optional as per requirement "reason: 字符串类型，记录扣减原因（可选）"'
         type: string
+      type:
+        enum:
+        - credit
+        - debit
+        type: string
     required:
     - amount
+    - type
     type: object
   user.CreditInfo:
     properties:
@@ -489,7 +495,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Increase or decrease user balance. Admin only.
+      description: Admin strictly increases (credit) or decreases (debit) user balance
+        based on the type field.
       parameters:
       - description: User ID
         in: path
@@ -536,56 +543,7 @@ paths:
             $ref: '#/definitions/utils.Response'
       security:
       - Bearer: []
-      summary: Adjust user balance
-      tags:
-      - admin
-    put:
-      consumes:
-      - application/json
-      description: Deduct amount from user's balance. Admin only.
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Deduction details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/user.BalanceAdjustmentRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/utils.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/user.UserListItem'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.Response'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/utils.Response'
-        "409":
-          description: Conflict
-          schema:
-            $ref: '#/definitions/utils.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.Response'
-      security:
-      - Bearer: []
-      summary: Deduct user balance
+      summary: Adjust user balance (Credit/Debit)
       tags:
       - admin
   /auth/login:

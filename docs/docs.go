@@ -384,93 +384,13 @@ const docTemplate = `{
             }
         },
         "/admin/users/{id}/balance": {
-            "put": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Deduct amount from user's balance. Admin only.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "admin"
-                ],
-                "summary": "Deduct user balance",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "User ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Deduction details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/user.BalanceAdjustmentRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/utils.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/user.UserListItem"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/utils.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/utils.Response"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/utils.Response"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/utils.Response"
-                        }
-                    }
-                }
-            },
             "post": {
                 "security": [
                     {
                         "Bearer": []
                     }
                 ],
-                "description": "Increase or decrease user balance. Admin only.",
+                "description": "Admin strictly increases (credit) or decreases (debit) user balance based on the type field.",
                 "consumes": [
                     "application/json"
                 ],
@@ -480,7 +400,7 @@ const docTemplate = `{
                 "tags": [
                     "admin"
                 ],
-                "summary": "Adjust user balance",
+                "summary": "Adjust user balance (Credit/Debit)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1183,7 +1103,8 @@ const docTemplate = `{
         "user.BalanceAdjustmentRequest": {
             "type": "object",
             "required": [
-                "amount"
+                "amount",
+                "type"
             ],
             "properties": {
                 "amount": {
@@ -1192,6 +1113,13 @@ const docTemplate = `{
                 "reason": {
                     "description": "Optional as per requirement \"reason: 字符串类型，记录扣减原因（可选）\"",
                     "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "credit",
+                        "debit"
+                    ]
                 }
             }
         },

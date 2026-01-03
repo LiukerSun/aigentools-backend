@@ -227,13 +227,14 @@ func UpdateUser(c *gin.Context) {
 
 // BalanceAdjustmentRequest represents the request body for adjusting user balance
 type BalanceAdjustmentRequest struct {
-	Amount float64 `json:"amount" binding:"required"`
+	Amount float64 `json:"amount" binding:"required,gt=0"`
+	Type   string  `json:"type" binding:"required,oneof=credit debit"`
 	Reason string  `json:"reason"` // Optional as per requirement "reason: 字符串类型，记录扣减原因（可选）"
 }
 
 // AdjustBalance godoc
-// @Summary Adjust user balance
-// @Description Increase or decrease user balance. Admin only.
+// @Summary Adjust user balance (Credit/Debit)
+// @Description Admin strictly increases (credit) or decreases (debit) user balance based on the type field.
 // @Tags admin
 // @Accept json
 // @Produce json
@@ -278,101 +279,29 @@ func AdjustBalance(c *gin.Context) {
 		DeviceInfo: c.GetHeader("User-Agent"),
 	}
 
-	updatedUser, err := services.AdjustBalance(uint(id), req.Amount, req.Reason, meta)
-	if err != nil {
-		if err == services.ErrUserNotFound {
+	var updatedUser *models.User
+	var serviceErr error
+
+	if req.Type == "credit" {
+		updatedUser, serviceErr = services.AdjustBalance(uint(id), req.Amount, req.Reason, meta)
+	} else if req.Type == "debit" {
+		updatedUser, serviceErr = services.DeductBalance(uint(id), req.Amount, req.Reason, meta)
+	}
+
+	if serviceErr != nil {
+		if serviceErr == services.ErrUserNotFound {
 			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "User not found"))
 			return
 		}
-		if err == services.ErrOptimisticLock {
-			c.JSON(http.StatusConflict, utils.NewErrorResponse(http.StatusConflict, err.Error()))
-			return
-		}
-		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, fmt.Sprintf("Failed to adjust balance: %v", err)))
-		return
-	}
-
-	response := UserListItem{
-		ID:            updatedUser.ID,
-		Username:      updatedUser.Username,
-		Role:          updatedUser.Role,
-		IsActive:      updatedUser.IsActive,
-		ActivatedAt:   updatedUser.ActivatedAt,
-		DeactivatedAt: updatedUser.DeactivatedAt,
-		Balance:       updatedUser.Balance,
-		CreatedAt:     updatedUser.CreatedAt,
-		UpdatedAt:     updatedUser.UpdatedAt,
-	}
-
-	c.JSON(http.StatusOK, utils.NewSuccessResponse("Balance adjusted successfully", response))
-}
-
-// DeductBalance godoc
-// @Summary Deduct user balance
-// @Description Deduct amount from user's balance. Admin only.
-// @Tags admin
-// @Accept json
-// @Produce json
-// @Security Bearer
-// @Param id path int true "User ID"
-// @Param request body user.BalanceAdjustmentRequest true "Deduction details"
-// @Success 200 {object} utils.Response{data=user.UserListItem}
-// @Failure 400 {object} utils.Response
-// @Failure 404 {object} utils.Response
-// @Failure 409 {object} utils.Response
-// @Failure 500 {object} utils.Response
-// @Router /admin/users/{id}/balance [put]
-func DeductBalance(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid user ID"))
-		return
-	}
-
-	var req BalanceAdjustmentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, err.Error()))
-		return
-	}
-
-	if req.Amount <= 0 {
-		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Amount must be positive"))
-		return
-	}
-
-	operator := "unknown"
-	var operatorID uint
-	if userVal, exists := c.Get("user"); exists {
-		if u, ok := userVal.(models.User); ok {
-			operator = u.Username
-			operatorID = u.ID
-		}
-	}
-
-	meta := services.TransactionMetadata{
-		Operator:   operator,
-		OperatorID: operatorID,
-		Type:       models.TransactionTypeSystemAdmin, // Or maybe a new type like AdminDeduction? Using AdminAdjustment for now.
-		IPAddress:  c.ClientIP(),
-		DeviceInfo: c.GetHeader("User-Agent"),
-	}
-
-	updatedUser, err := services.DeductBalance(uint(id), req.Amount, req.Reason, meta)
-	if err != nil {
-		if err == services.ErrUserNotFound {
-			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "User not found"))
-			return
-		}
-		if err == services.ErrInsufficientBalance {
+		if serviceErr == services.ErrInsufficientBalance {
 			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Insufficient balance"))
 			return
 		}
-		if err == services.ErrOptimisticLock {
-			c.JSON(http.StatusConflict, utils.NewErrorResponse(http.StatusConflict, err.Error()))
+		if serviceErr == services.ErrOptimisticLock {
+			c.JSON(http.StatusConflict, utils.NewErrorResponse(http.StatusConflict, serviceErr.Error()))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, fmt.Sprintf("Failed to deduct balance: %v", err)))
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, fmt.Sprintf("Failed to adjust balance: %v", serviceErr)))
 		return
 	}
 
@@ -389,5 +318,5 @@ func DeductBalance(c *gin.Context) {
 		UpdatedAt:     updatedUser.UpdatedAt,
 	}
 
-	c.JSON(http.StatusOK, utils.NewSuccessResponse("Balance deducted successfully", response))
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Balance adjusted successfully", response))
 }
