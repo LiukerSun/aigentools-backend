@@ -3,6 +3,7 @@ package api
 import (
 	"aigentools-backend/config"
 	_ "aigentools-backend/docs"
+	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
 	"aigentools-backend/internal/api/v1/auth"
 	userRoutes "aigentools-backend/internal/api/v1/user"
@@ -62,6 +63,7 @@ func NewRouter() (*gin.Engine, error) {
 		admin.Use(middleware.AdminAuthMiddleware())
 		{
 			adminUser.RegisterRoutes(admin)
+			adminTransaction.RegisterRoutes(admin)
 		}
 	}
 

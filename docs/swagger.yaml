@@ -20,6 +20,58 @@ definitions:
     - password
     - username
     type: object
+  models.TransactionType:
+    enum:
+    - admin_adjustment
+    - system_auto
+    - user_consume
+    - user_refund
+    type: string
+    x-enum-varnames:
+    - TransactionTypeSystemAdmin
+    - TransactionTypeSystemAuto
+    - TransactionTypeUserConsume
+    - TransactionTypeUserRefund
+  transaction.TransactionListItem:
+    properties:
+      amount:
+        type: number
+      balance_after:
+        type: number
+      balance_before:
+        type: number
+      created_at:
+        type: string
+      device_info:
+        type: string
+      hash:
+        type: string
+      id:
+        type: integer
+      ip_address:
+        type: string
+      operator:
+        type: string
+      reason:
+        type: string
+      type:
+        $ref: '#/definitions/models.TransactionType'
+      user_id:
+        type: integer
+    type: object
+  transaction.TransactionListResponse:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      transactions:
+        items:
+          $ref: '#/definitions/transaction.TransactionListItem'
+        type: array
+    type: object
   user.BalanceAdjustmentRequest:
     properties:
       amount:
@@ -142,6 +194,117 @@ info:
   title: aigentools-backend API
   version: "1.0"
 paths:
+  /admin/transactions:
+    get:
+      description: Get a paginated list of transactions with filtering. Admin only.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by transaction type
+        in: query
+        name: type
+        type: string
+      - description: Filter by start time (RFC3339)
+        in: query
+        name: start_time
+        type: string
+      - description: Filter by end time (RFC3339)
+        in: query
+        name: end_time
+        type: string
+      - description: Filter by minimum amount
+        in: query
+        name: min_amount
+        type: number
+      - description: Filter by maximum amount
+        in: query
+        name: max_amount
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/transaction.TransactionListResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: List transactions
+      tags:
+      - admin
+  /admin/transactions/export:
+    get:
+      description: Export transactions to CSV. Admin only.
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by transaction type
+        in: query
+        name: type
+        type: string
+      - description: Filter by start time (RFC3339)
+        in: query
+        name: start_time
+        type: string
+      - description: Filter by end time (RFC3339)
+        in: query
+        name: end_time
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Export transactions
+      tags:
+      - admin
   /admin/users:
     get:
       description: Get a paginated list of users. Admin only.

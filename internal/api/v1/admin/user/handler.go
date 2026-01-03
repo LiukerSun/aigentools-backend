@@ -262,13 +262,23 @@ func AdjustBalance(c *gin.Context) {
 	}
 
 	operator := "unknown"
+	var operatorID uint
 	if userVal, exists := c.Get("user"); exists {
 		if u, ok := userVal.(models.User); ok {
 			operator = u.Username
+			operatorID = u.ID
 		}
 	}
 
-	updatedUser, err := services.AdjustBalance(uint(id), req.Amount, req.Reason, operator)
+	meta := services.TransactionMetadata{
+		Operator:   operator,
+		OperatorID: operatorID,
+		Type:       models.TransactionTypeSystemAdmin,
+		IPAddress:  c.ClientIP(),
+		DeviceInfo: c.GetHeader("User-Agent"),
+	}
+
+	updatedUser, err := services.AdjustBalance(uint(id), req.Amount, req.Reason, meta)
 	if err != nil {
 		if err == services.ErrUserNotFound {
 			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "User not found"))

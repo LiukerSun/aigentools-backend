@@ -1,6 +1,7 @@
 package services
 
 import (
+	"aigentools-backend/config"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
 	"encoding/json"
@@ -160,8 +161,17 @@ func UpdateUser(id uint, updates map[string]interface{}, operator string) (*mode
 	return &user, nil
 }
 
+// TransactionMetadata contains additional information for transaction logging
+type TransactionMetadata struct {
+	Operator   string
+	OperatorID uint
+	Type       models.TransactionType
+	IPAddress  string
+	DeviceInfo string
+}
+
 // AdjustBalance updates user's balance and records the transaction.
-func AdjustBalance(userID uint, amount float64, reason string, operator string) (*models.User, error) {
+func AdjustBalance(userID uint, amount float64, reason string, meta TransactionMetadata) (*models.User, error) {
 	tx := database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -193,10 +203,6 @@ func AdjustBalance(userID uint, amount float64, reason string, operator string) 
 		updates["is_active"] = false
 		now := time.Now()
 		updates["deactivated_at"] = &now
-	} else if balanceBefore == 0 && balanceAfter != 0 {
-		// Only if it was 0 and now is not 0, we might want to activate?
-		// Requirement: "当用户额度≠0时，用户激活状态不受影响（保持原状态）"
-		// So we don't auto-activate, we only auto-deactivate if 0.
 	}
 
 	// Apply updates with optimistic lock
@@ -217,9 +223,23 @@ func AdjustBalance(userID uint, amount float64, reason string, operator string) 
 		BalanceBefore: balanceBefore,
 		BalanceAfter:  balanceAfter,
 		Reason:        reason,
-		Operator:      operator,
+		Operator:      meta.Operator,
+		OperatorID:    meta.OperatorID,
+		Type:          meta.Type,
+		IPAddress:     meta.IPAddress,
+		DeviceInfo:    meta.DeviceInfo,
 		CreatedAt:     time.Now(),
 	}
+
+	// Generate hash for tamper-proofing
+	// In production, secret should come from config/env
+	cfg, _ := config.LoadConfig() // Assuming LoadConfig is cheap or cached
+	secret := "default-secret"
+	if cfg != nil && cfg.JWTSecret != "" {
+		secret = cfg.JWTSecret
+	}
+	transaction.Hash = transaction.GenerateHash(secret)
+
 	if err := tx.Create(&transaction).Error; err != nil {
 		tx.Rollback()
 		return nil, err

@@ -182,6 +182,7 @@ func TestAdjustBalance(t *testing.T) {
 				assert.Equal(t, 50.0, trans.Amount)
 				assert.Equal(t, 150.0, trans.BalanceBefore)
 				assert.Equal(t, 200.0, trans.BalanceAfter)
+				assert.Equal(t, models.TransactionTypeSystemAdmin, trans.Type)
 			},
 		},
 		{
