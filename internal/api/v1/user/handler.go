@@ -13,7 +13,7 @@ import (
 // @Description Get current user's information
 // @Tags user
 // @Produce  json
-// @Security ApiKeyAuth
+// @Security Bearer
 // @Success 200 {object} utils.Response{data=user.UserResponse}
 // @Failure 401 {object} utils.Response
 // @Failure 500 {object} utils.Response

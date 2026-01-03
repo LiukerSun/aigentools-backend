@@ -12,6 +12,9 @@ import (
 // @title aigentools-backend API
 // @version 1.0
 // @description This is a sample server for aigentools-backend.
+// @description Authentication: Bearer Token (JWT).
+// @description For Apifox/Swagger UI: Click "Authorize", enter "Bearer " followed by your token.
+// @description Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 // @termsOfService http://swagger.io/terms/
 
 // @contact.name API Support
@@ -24,9 +27,10 @@ import (
 // @host localhost:8080
 // @BasePath /api/v1
 
-// @securityDefinitions.apikey ApiKeyAuth
+// @securityDefinitions.apikey Bearer
 // @in header
 // @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	router, err := api.NewRouter()

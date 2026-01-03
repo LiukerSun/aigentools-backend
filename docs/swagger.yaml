@@ -20,6 +20,45 @@ definitions:
     - password
     - username
     type: object
+  user.UpdateUserRequest:
+    properties:
+      password:
+        minLength: 6
+        type: string
+      role:
+        enum:
+        - admin
+        - user
+        type: string
+      username:
+        type: string
+    type: object
+  user.UserListItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      role:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  user.UserListResponse:
+    properties:
+      limit:
+        type: integer
+      page:
+        type: integer
+      total:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/user.UserListItem'
+        type: array
+    type: object
   user.UserResponse:
     properties:
       id:
@@ -46,7 +85,11 @@ info:
     email: support@swagger.io
     name: API Support
     url: http://www.swagger.io/support
-  description: This is a sample server for aigentools-backend.
+  description: |-
+    This is a sample server for aigentools-backend.
+    Authentication: Bearer Token (JWT).
+    For Apifox/Swagger UI: Click "Authorize", enter "Bearer " followed by your token.
+    Example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
@@ -54,6 +97,107 @@ info:
   title: aigentools-backend API
   version: "1.0"
 paths:
+  /admin/users:
+    get:
+      description: Get a paginated list of users. Admin only.
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: List all users
+      tags:
+      - admin
+  /admin/users/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update user details. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User details to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Update a user
+      tags:
+      - admin
   /auth/login:
     post:
       consumes:
@@ -108,7 +252,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - ApiKeyAuth: []
+      - Bearer: []
       summary: Log out a user
       tags:
       - auth
@@ -175,12 +319,13 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - ApiKeyAuth: []
+      - Bearer: []
       summary: Get current user
       tags:
       - user
 securityDefinitions:
-  ApiKeyAuth:
+  Bearer:
+    description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization
     type: apiKey

@@ -103,7 +103,7 @@ func Login(c *gin.Context) {
 // @Description Invalidate the user's current token
 // @Tags auth
 // @Produce  json
-// @Security ApiKeyAuth
+// @Security Bearer
 // @Success 200 {object} utils.Response
 // @Failure 401 {object} utils.Response
 // @Failure 500 {object} utils.Response

@@ -2,11 +2,12 @@ package api
 
 import (
 	"aigentools-backend/config"
+	_ "aigentools-backend/docs"
+	adminUser "aigentools-backend/internal/api/v1/admin/user"
 	"aigentools-backend/internal/api/v1/auth"
-	"aigentools-backend/internal/api/v1/user"
+	userRoutes "aigentools-backend/internal/api/v1/user"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/middleware"
-	_ "aigentools-backend/docs"
 
 	"github.com/gin-contrib/cors" // Import the cors middleware
 	"github.com/gin-gonic/gin"
@@ -53,7 +54,14 @@ func NewRouter() (*gin.Engine, error) {
 		authorized := v1.Group("/")
 		authorized.Use(middleware.AuthMiddleware())
 		{
-			user.RegisterRoutes(authorized)
+			userRoutes.RegisterRoutes(authorized)
+		}
+
+		// Admin routes
+		admin := v1.Group("/admin")
+		admin.Use(middleware.AdminAuthMiddleware())
+		{
+			adminUser.RegisterRoutes(admin)
 		}
 	}
 
