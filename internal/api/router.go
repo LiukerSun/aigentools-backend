@@ -5,6 +5,7 @@ import (
 	_ "aigentools-backend/docs"
 	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
+	aiModel "aigentools-backend/internal/api/v1/ai_model"
 	"aigentools-backend/internal/api/v1/auth"
 	userRoutes "aigentools-backend/internal/api/v1/user"
 	"aigentools-backend/internal/database"
@@ -33,6 +34,7 @@ func NewRouter() (*gin.Engine, error) {
 	}
 
 	router := gin.Default()
+	router.SetTrustedProxies(nil)
 
 	// Configure CORS
 	router.Use(cors.New(cors.Config{
@@ -51,6 +53,7 @@ func NewRouter() (*gin.Engine, error) {
 	v1 := router.Group("/api/v1")
 	{
 		auth.RegisterRoutes(v1)
+		aiModel.RegisterRoutes(v1)
 
 		authorized := v1.Group("/")
 		authorized.Use(middleware.AuthMiddleware())

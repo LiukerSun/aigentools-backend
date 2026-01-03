@@ -1,5 +1,62 @@
 basePath: /api/v1
 definitions:
+  ai_model.AIModelListItem:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/models.AIModelStatus'
+      updated_at:
+        type: string
+    type: object
+  ai_model.AIModelListResponse:
+    properties:
+      limit:
+        type: integer
+      models:
+        items:
+          $ref: '#/definitions/ai_model.AIModelListItem'
+        type: array
+      page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  ai_model.CreateModelRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AIModelStatus'
+        enum:
+        - open
+        - closed
+        - draft
+    required:
+    - name
+    - status
+    type: object
+  ai_model.UpdateStatusRequest:
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/models.AIModelStatus'
+        enum:
+        - open
+        - closed
+        - draft
+    required:
+    - status
+    type: object
   auth.LoginInput:
     properties:
       password:
@@ -20,6 +77,16 @@ definitions:
     - password
     - username
     type: object
+  models.AIModelStatus:
+    enum:
+    - open
+    - closed
+    - draft
+    type: string
+    x-enum-varnames:
+    - AIModelStatusOpen
+    - AIModelStatusClosed
+    - AIModelStatusDraft
   models.TransactionType:
     enum:
     - admin_adjustment
@@ -77,10 +144,10 @@ definitions:
       amount:
         type: number
       reason:
+        description: 'Optional as per requirement "reason: 字符串类型，记录扣减原因（可选）"'
         type: string
     required:
     - amount
-    - reason
     type: object
   user.CreditInfo:
     properties:
@@ -472,6 +539,55 @@ paths:
       summary: Adjust user balance
       tags:
       - admin
+    put:
+      consumes:
+      - application/json
+      description: Deduct amount from user's balance. Admin only.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Deduction details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.BalanceAdjustmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/user.UserListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - Bearer: []
+      summary: Deduct user balance
+      tags:
+      - admin
   /auth/login:
     post:
       consumes:
@@ -597,6 +713,140 @@ paths:
       summary: Get current user
       tags:
       - user
+  /models:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of AI models with filtering based on
+        user role
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      - description: Filter by status
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/ai_model.AIModelListResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Get list of AI models
+      tags:
+      - models
+  /models/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Update the status of an AI model. Admin only.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ai_model.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Update AI model status
+      tags:
+      - models
+  /models/create:
+    post:
+      consumes:
+      - application/json
+      description: Create a new AI model. Admin only.
+      parameters:
+      - description: Model details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ai_model.CreateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/ai_model.AIModelListItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Create a new AI model
+      tags:
+      - models
 securityDefinitions:
   Bearer:
     description: Type "Bearer" followed by a space and JWT token.
