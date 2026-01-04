@@ -196,7 +196,16 @@ func CreateModel(c *gin.Context) {
 	}
 
 	if model.Parameters == nil {
-		model.Parameters = make(models.JSON)
+		model.Parameters = models.JSON{
+			"request_header":      []interface{}{},
+			"request_body":        []interface{}{},
+			"response_parameters": []interface{}{},
+		}
+	}
+
+	if err := models.ValidateModelParameters(model.Parameters); err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid parameters: "+err.Error()))
+		return
 	}
 
 	// Log sensitive operation
@@ -278,6 +287,10 @@ func UpdateModel(c *gin.Context) {
 	}
 	if req.Parameters != nil {
 		model.Parameters = req.Parameters
+		if err := models.ValidateModelParameters(model.Parameters); err != nil {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid parameters: "+err.Error()))
+			return
+		}
 	}
 
 	log.Printf("[SECURITY AUDIT] User %s (ID: %d) is updating model %d", user.Username, user.ID, id)

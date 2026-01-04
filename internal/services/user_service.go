@@ -371,3 +371,52 @@ func AdjustBalance(userID uint, amount float64, reason string, meta TransactionM
 
 	return &user, nil
 }
+
+// DeleteUser permanently deletes a user and their transactions.
+func DeleteUser(id uint) error {
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Check if user exists
+	var user models.User
+	if err := tx.First(&user, id).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrUserNotFound
+		}
+		return err
+	}
+
+	// Delete all transactions for the user
+	if err := tx.Where("user_id = ?", id).Delete(&models.Transaction{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Delete the user
+	if err := tx.Delete(&models.User{}, id).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Commit
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("user:%d", id)
+		database.RedisClient.Del(database.Ctx, cacheKey)
+	}
+
+	// Log operation (placeholder for audit log)
+	fmt.Printf("User %d and their transactions permanently deleted.\n", id)
+
+	return nil
+}
+

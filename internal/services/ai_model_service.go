@@ -40,11 +40,17 @@ func FindAIModels(filter AIModelFilter) ([]models.AIModel, int64, error) {
 
 // CreateAIModel creates a new AI model
 func CreateAIModel(model *models.AIModel) error {
+	if err := models.ValidateModelParameters(model.Parameters); err != nil {
+		return err
+	}
 	return database.DB.Create(model).Error
 }
 
 // UpdateAIModel updates an existing AI model
 func UpdateAIModel(model *models.AIModel) error {
+	if err := models.ValidateModelParameters(model.Parameters); err != nil {
+		return err
+	}
 	return database.DB.Save(model).Error
 }
 

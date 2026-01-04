@@ -57,11 +57,9 @@ func ExtractToken(c *gin.Context) (string, error) {
 	}
 
 	const bearerPrefix = "Bearer "
-	if strings.HasPrefix(authHeader, bearerPrefix) {
-		return strings.TrimPrefix(authHeader, bearerPrefix), nil
+	if !strings.HasPrefix(authHeader, bearerPrefix) {
+		return "", fmt.Errorf("bearer token not found")
 	}
 
-	// Fallback: If no prefix, assume the entire header is the token
-	// This helps with Swagger UI / Apifox compat where users might just paste the token
-	return authHeader, nil
+	return strings.TrimPrefix(authHeader, bearerPrefix), nil
 }

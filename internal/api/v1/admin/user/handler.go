@@ -320,3 +320,48 @@ func AdjustBalance(c *gin.Context) {
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("Balance adjusted successfully", response))
 }
+
+// DeleteUser godoc
+// @Summary Delete a user
+// @Description Delete a user permanently. Admin only.
+// @Tags admin
+// @Produce json
+// @Security Bearer
+// @Param id path int true "User ID"
+// @Success 200 {object} utils.Response
+// @Failure 400 {object} utils.Response
+// @Failure 401 {object} utils.Response
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /admin/users/{id} [delete]
+func DeleteUser(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid user ID"))
+		return
+	}
+
+	// Check for self-deletion
+	if userVal, exists := c.Get("user"); exists {
+		if u, ok := userVal.(models.User); ok {
+			if u.ID == uint(id) {
+				c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Admin users cannot delete themselves"))
+				return
+			}
+		}
+	}
+
+	err = services.DeleteUser(uint(id))
+	if err != nil {
+		if err == services.ErrUserNotFound {
+			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "User not found"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, "Failed to delete user"))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("User deleted successfully", nil))
+}
