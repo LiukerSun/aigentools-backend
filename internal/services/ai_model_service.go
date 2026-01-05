@@ -59,7 +59,17 @@ func UpdateAIModel(model *models.AIModel) error {
 	if err := models.ValidateModelParameters(model.Parameters); err != nil {
 		return err
 	}
-	return database.DB.Save(model).Error
+	if err := database.DB.Save(model).Error; err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("model_params:%d", model.ID)
+		database.RedisClient.Del(database.Ctx, cacheKey)
+	}
+
+	return nil
 }
 
 // GetAIModelByID retrieves a model by ID

@@ -128,3 +128,48 @@ func TestGetModelParametersByID(t *testing.T) {
 		assert.Equal(t, "modified", header[0])
 	}
 }
+
+func TestUpdateAIModelClearsCache(t *testing.T) {
+	setupTestDB()
+	mr := setupTestRedis()
+	defer mr.Close()
+
+	params := models.JSON{
+		"request_header":      []interface{}{},
+		"request_body":        []interface{}{},
+		"response_parameters": []interface{}{},
+	}
+
+	model := models.AIModel{
+		Name:       "Cache Test Model",
+		Parameters: params,
+	}
+	database.DB.Create(&model)
+
+	// 1. Populate cache
+	_, err := GetModelParametersByID(model.ID)
+	assert.NoError(t, err)
+
+	// 2. Update model using service
+	newParams := models.JSON{
+		"request_header": []interface{}{
+			map[string]interface{}{"name": "Authorization", "type": "string", "required": true, "description": "Token", "example": "Bearer"},
+		},
+		"request_body":        []interface{}{},
+		"response_parameters": []interface{}{},
+	}
+	model.Parameters = newParams
+
+	err = UpdateAIModel(&model)
+	assert.NoError(t, err)
+
+	// 3. Fetch again - should get NEW params
+	fetchedParams, err := GetModelParametersByID(model.ID)
+	assert.NoError(t, err)
+
+	header, ok := fetchedParams["request_header"].([]interface{})
+	if assert.True(t, ok) {
+		// If cache is NOT cleared, we get empty list from old params
+		assert.NotEmpty(t, header, "Expected updated parameters, but got empty header (likely from stale cache)")
+	}
+}
