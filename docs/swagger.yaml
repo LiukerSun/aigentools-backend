@@ -145,6 +145,21 @@ definitions:
     - TransactionTypeSystemAuto
     - TransactionTypeUserConsume
     - TransactionTypeUserRefund
+  services.STSCredentials:
+    properties:
+      accessKeyId:
+        type: string
+      accessKeySecret:
+        type: string
+      bucket:
+        type: string
+      expiration:
+        type: string
+      region:
+        type: string
+      securityToken:
+        type: string
+    type: object
   transaction.TransactionListItem:
     properties:
       amount:
@@ -757,6 +772,26 @@ paths:
       summary: Get current user
       tags:
       - user
+  /common/upload/token:
+    get:
+      consumes:
+      - application/json
+      description: Get STS token for uploading files to Alibaba Cloud OSS
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/services.STSCredentials'
+              type: object
+      summary: Get OSS STS Token
+      tags:
+      - common
   /models:
     get:
       consumes:

@@ -19,6 +19,14 @@ type Config struct {
 	RedisPassword string
 	JWTSecret     string
 
+	// OSS Configuration
+	OSSEndpoint        string
+	OSSAccessKeyID     string
+	OSSAccessKeySecret string
+	OSSBucketName      string
+	OSSRoleArn         string
+	OSSRegion          string
+
 	// Log configuration
 	LogLevel      string
 	LogFilename   string
@@ -56,6 +64,13 @@ func LoadConfig() (*Config, error) {
 		RedisPort:     os.Getenv("REDIS_PORT"),
 		RedisPassword: os.Getenv("REDIS_PASSWORD"),
 		JWTSecret:     os.Getenv("JWT_SECRET"),
+
+		OSSEndpoint:        os.Getenv("OSS_ENDPOINT"),
+		OSSAccessKeyID:     os.Getenv("OSS_ACCESS_KEY_ID"),
+		OSSAccessKeySecret: os.Getenv("OSS_ACCESS_KEY_SECRET"),
+		OSSBucketName:      os.Getenv("OSS_BUCKET_NAME"),
+		OSSRoleArn:         os.Getenv("OSS_ROLE_ARN"),
+		OSSRegion:          os.Getenv("OSS_REGION"),
 
 		LogLevel:      getEnv("LOG_LEVEL", "INFO"),
 		LogFilename:   getEnv("LOG_FILENAME", "logs/app.log"),

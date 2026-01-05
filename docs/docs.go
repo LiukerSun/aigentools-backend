@@ -741,6 +741,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/common/upload/token": {
+            "get": {
+                "description": "Get STS token for uploading files to Alibaba Cloud OSS",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "common"
+                ],
+                "summary": "Get OSS STS Token",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/services.STSCredentials"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/models": {
             "get": {
                 "description": "Retrieve a paginated list of AI models with filtering based on user role",
@@ -1364,6 +1399,29 @@ const docTemplate = `{
                 "TransactionTypeUserConsume",
                 "TransactionTypeUserRefund"
             ]
+        },
+        "services.STSCredentials": {
+            "type": "object",
+            "properties": {
+                "accessKeyId": {
+                    "type": "string"
+                },
+                "accessKeySecret": {
+                    "type": "string"
+                },
+                "bucket": {
+                    "type": "string"
+                },
+                "expiration": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "securityToken": {
+                    "type": "string"
+                }
+            }
         },
         "transaction.TransactionListItem": {
             "type": "object",
