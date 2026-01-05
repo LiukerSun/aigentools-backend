@@ -3,6 +3,7 @@ package services
 import (
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
+	"aigentools-backend/internal/utils"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -61,7 +62,7 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 	)
 
 	// 提前初始化 client，因为 Poll 部分也需要用到它
-	client = &http.Client{Timeout: 30 * time.Second}
+	client = utils.NewHTTPClient(30 * time.Second)
 
 	// 2. Send Request / Check if already sent
 	// If RemoteTaskID exists, skip submission and go to polling
@@ -162,12 +163,9 @@ Poll:
 		if t, ok := model["query_url_template"].(string); ok && t != "" {
 			queryURL = fmt.Sprintf(t, remoteTaskID)
 		} else {
-			baseURL := "https://api.jiekou.ai/v3/async"
-			if strings.HasPrefix(modelURL, baseURL) {
-				queryURL = baseURL + "/task/" + remoteTaskID
-			} else {
-				queryURL = fmt.Sprintf("https://api.jiekou.ai/v3/async/task/%s", remoteTaskID)
-			}
+			// Updated default polling URL format based on user feedback
+			// Format: https://api.jiekou.ai/v3/async/task-result?task_id={id}
+			queryURL = fmt.Sprintf("https://api.jiekou.ai/v3/async/task-result?task_id=%s", remoteTaskID)
 		}
 	}
 
@@ -183,14 +181,9 @@ Poll:
 			return nil, errors.New("task polling timed out")
 		case <-ticker.C:
 			statusReq, _ := http.NewRequest("GET", queryURL, nil)
-			// Copy headers
-			if headers, ok := model["headers"].(map[string]interface{}); ok {
-				for k, v := range headers {
-					if s, ok := v.(string); ok {
-						statusReq.Header.Set(k, s)
-					}
-				}
-			}
+			// add headers
+			statusReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("JIEKOU_API")))
+			statusReq.Header.Set("Content-Type", "application/json")
 
 			statusResp, err := client.Do(statusReq)
 			if err != nil {

@@ -2,6 +2,7 @@ package services
 
 import (
 	"aigentools-backend/internal/models"
+	"aigentools-backend/internal/utils"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -64,7 +65,7 @@ func (e RemoteAPITaskExecutor) Execute(task *models.Task) (map[string]interface{
 		}
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := utils.NewHTTPClient(30 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %v", err)
