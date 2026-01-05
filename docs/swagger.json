@@ -22,7 +22,7 @@
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Get a paginated list of transactions with filtering. Admin only.",
@@ -198,7 +198,7 @@
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Get a paginated list of users. Admin only.",
@@ -293,7 +293,7 @@
             "delete": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Delete a user permanently. Admin only.",
@@ -355,7 +355,7 @@
             "patch": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Update user details. Admin only.",
@@ -443,7 +443,7 @@
             "post": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Admin strictly increases (credit) or decreases (debit) user balance based on the type field.",
@@ -690,7 +690,7 @@
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Get current user's information",
@@ -737,11 +737,6 @@
         },
         "/models": {
             "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Retrieve a paginated list of AI models with filtering based on user role",
                 "consumes": [
                     "application/json"
@@ -817,11 +812,6 @@
         },
         "/models/create": {
             "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Create a new AI model. Admin only.",
                 "consumes": [
                     "application/json"
@@ -894,7 +884,7 @@
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Retrieve a list of all AI models with basic details (excluding parameters).",
@@ -941,11 +931,6 @@
         },
         "/models/{id}": {
             "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Update AI model details. Admin only.",
                 "consumes": [
                     "application/json"
@@ -1025,7 +1010,7 @@
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Retrieve the parameters of an AI model by its ID.",
@@ -1090,11 +1075,6 @@
         },
         "/models/{id}/status": {
             "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
                 "description": "Update the status of an AI model. Admin only.",
                 "consumes": [
                     "application/json"
@@ -1608,10 +1588,7 @@
         }
     },
     "securityDefinitions": {
-        "BasicAuth": {
-            "type": "basic"
-        },
-        "BearerAuth": {
+        "Bearer": {
             "description": "Type \"Bearer\" followed by a space and JWT token.",
             "type": "apiKey",
             "name": "Authorization",

@@ -376,7 +376,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: List transactions
       tags:
       - admin
@@ -479,7 +479,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: List all users
       tags:
       - admin
@@ -520,7 +520,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Delete a user
       tags:
       - admin
@@ -573,7 +573,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Update a user
       tags:
       - admin
@@ -628,7 +628,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Adjust user balance (Credit/Debit)
       tags:
       - admin
@@ -753,7 +753,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Get current user
       tags:
       - user
@@ -802,8 +802,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
-      security:
-      - BearerAuth: []
       summary: Get list of AI models
       tags:
       - models
@@ -852,8 +850,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
-      security:
-      - BearerAuth: []
       summary: Update an existing AI model
       tags:
       - models
@@ -893,7 +889,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Get AI model parameters by ID
       tags:
       - models
@@ -937,8 +933,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
-      security:
-      - BearerAuth: []
       summary: Update AI model status
       tags:
       - models
@@ -982,8 +976,6 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
-      security:
-      - BearerAuth: []
       summary: Create a new AI model
       tags:
       - models
@@ -1012,14 +1004,12 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Get list of all AI models (simplified)
       tags:
       - models
 securityDefinitions:
-  BasicAuth:
-    type: basic
-  BearerAuth:
+  Bearer:
     description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization
