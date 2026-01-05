@@ -120,14 +120,6 @@ definitions:
     - password
     - username
     type: object
-  gorm.DeletedAt:
-    properties:
-      time:
-        type: string
-      valid:
-        description: Valid is true if Time is not NULL
-        type: boolean
-    type: object
   models.AIModelStatus:
     enum:
     - open
@@ -143,31 +135,31 @@ definitions:
     type: object
   models.Task:
     properties:
-      createdAt:
+      created_at:
         type: string
       creator_id:
         type: integer
       creator_name:
         type: string
-      deletedAt:
-        $ref: '#/definitions/gorm.DeletedAt'
+      deleted_at:
+        type: string
       error_log:
         type: string
       id:
         type: integer
       input_data:
-        items:
-          type: integer
-        type: array
+        type: object
       max_retries:
         type: integer
+      remote_task_id:
+        type: string
       result_url:
         type: string
       retry_count:
         type: integer
       status:
         $ref: '#/definitions/models.TaskStatus'
-      updatedAt:
+      updated_at:
         type: string
     type: object
   models.TaskStatus:
@@ -1292,6 +1284,42 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       summary: Approve a task
+      tags:
+      - tasks
+  /tasks/{id}/retry:
+    post:
+      description: Retry a task that has failed
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Retry a failed task
       tags:
       - tasks
 securityDefinitions:

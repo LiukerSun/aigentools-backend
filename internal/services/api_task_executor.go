@@ -40,7 +40,10 @@ func (e RemoteAPITaskExecutor) Execute(task *models.Task) (map[string]interface{
 	if method == "" {
 		method = "POST"
 	}
-	headers, _ := input["headers"].(map[string]interface{})
+	headers := map[string]interface{}{}
+	headers["Authorization"] = fmt.Sprintf("Bearer %s", os.Getenv("JIEKOU_API"))
+	headers["Content-Type"] = "application/json"
+
 	payload, _ := input["payload"].(map[string]interface{})
 
 	if targetURL == "" {

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
 	"encoding/json"
 	"net/http"
@@ -9,10 +10,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/datatypes"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
+func setupJiekouTestDB() {
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	db.Migrator().DropTable(&models.Task{})
+	db.AutoMigrate(&models.Task{})
+	database.DB = db
+}
+
 func TestJiekouExecutor_Execute(t *testing.T) {
+	setupJiekouTestDB() // Initialize DB for Save(task) call
+
 	// 1. Mock Jiekou API
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -21,7 +35,7 @@ func TestJiekouExecutor_Execute(t *testing.T) {
 			var body map[string]interface{}
 			json.NewDecoder(r.Body).Decode(&body)
 			assert.Equal(t, "123", body["prompt"])
-			
+
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]interface{}{
 				"code": 200,
@@ -34,10 +48,12 @@ func TestJiekouExecutor_Execute(t *testing.T) {
 			// Verify polling
 			w.WriteHeader(http.StatusOK)
 			json.NewEncoder(w).Encode(map[string]interface{}{
-				"code": 200,
-				"data": map[string]interface{}{
-					"status": "success",
-					"url": "http://" + r.Host + "/result.mp4",
+				"task": map[string]string{
+					"status":  "TASK_STATUS_SUCCEED",
+					"task_id": "jk-task-888",
+				},
+				"videos": []map[string]string{
+					{"video_url": "http://" + r.Host + "/result.mp4"},
 				},
 			})
 
@@ -56,10 +72,10 @@ func TestJiekouExecutor_Execute(t *testing.T) {
 	input := map[string]interface{}{
 		"data": map[string]interface{}{
 			"prompt": "123",
-			"image": "https://example.com/img.png",
+			"image":  "https://example.com/img.png",
 		},
 		"model": map[string]interface{}{
-			"model_url": mockServer.URL + "/create",
+			"model_url":  mockServer.URL + "/create",
 			"model_name": "Test Model",
 			// Override polling template for test since we don't have real jiekou.ai
 			"query_url_template": mockServer.URL + "/query/%s",
@@ -68,9 +84,10 @@ func TestJiekouExecutor_Execute(t *testing.T) {
 	inputBytes, _ := json.Marshal(input)
 
 	task := &models.Task{
-		Model: gorm.Model{ID: 100},
+		ID:        100,
 		InputData: datatypes.JSON(inputBytes),
 	}
+	database.DB.Create(task) // Create in DB so Save works
 
 	// 3. Mock Uploader
 	mockUploader := func(localPath string, objectKey string) (string, error) {

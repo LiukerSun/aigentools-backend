@@ -162,3 +162,45 @@ func GetTaskDetail(c *gin.Context) {
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("Task retrieved successfully", task))
 }
+
+// RetryTask godoc
+// @Summary Retry a failed task
+// @Description Retry a task that has failed
+// @Tags tasks
+// @Produce json
+// @Param id path int true "Task ID"
+// @Success 200 {object} utils.Response{data=models.Task}
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /tasks/{id}/retry [post]
+func RetryTask(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid task ID"))
+		return
+	}
+
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
+		return
+	}
+	currentUser := user.(models.User)
+
+	task, err := services.RetryTask(uint(id), currentUser.ID)
+	if err != nil {
+		if err.Error() == "unauthorized to retry this task" {
+			c.JSON(http.StatusForbidden, utils.NewErrorResponse(http.StatusForbidden, err.Error()))
+		} else if err.Error() == "task is not in a failed state" {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		} else {
+			// Assuming record not found if generic error from DB First
+			c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Task retried successfully", task))
+}

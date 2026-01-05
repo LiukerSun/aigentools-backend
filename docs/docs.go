@@ -1449,6 +1449,65 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/tasks/{id}/retry": {
+            "post": {
+                "description": "Retry a task that has failed",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Retry a failed task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1639,18 +1698,6 @@ const docTemplate = `{
                 }
             }
         },
-        "gorm.DeletedAt": {
-            "type": "object",
-            "properties": {
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "description": "Valid is true if Time is not NULL",
-                    "type": "boolean"
-                }
-            }
-        },
         "models.AIModelStatus": {
             "type": "string",
             "enum": [
@@ -1671,7 +1718,7 @@ const docTemplate = `{
         "models.Task": {
             "type": "object",
             "properties": {
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "creator_id": {
@@ -1680,8 +1727,8 @@ const docTemplate = `{
                 "creator_name": {
                     "type": "string"
                 },
-                "deletedAt": {
-                    "$ref": "#/definitions/gorm.DeletedAt"
+                "deleted_at": {
+                    "type": "string"
                 },
                 "error_log": {
                     "type": "string"
@@ -1690,13 +1737,13 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "input_data": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                    "type": "object"
                 },
                 "max_retries": {
                     "type": "integer"
+                },
+                "remote_task_id": {
+                    "type": "string"
                 },
                 "result_url": {
                     "type": "string"
@@ -1707,7 +1754,7 @@ const docTemplate = `{
                 "status": {
                     "$ref": "#/definitions/models.TaskStatus"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 }
             }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
 	"bytes"
 	"encoding/json"
@@ -46,17 +47,40 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 		return nil, errors.New("missing model_url")
 	}
 
-	// 2. Send Request
-	payloadBytes, _ := json.Marshal(data)
-	req, err := http.NewRequest("POST", modelURL, bytes.NewBuffer(payloadBytes))
+	// --- 修复重点：将所有变量声明提到 goto 之前 ---
+	var (
+		remoteTaskID string
+		respData     map[string]interface{}
+		bodyBytes    []byte
+		resp         *http.Response
+		err          error
+		// 以下是为了解决 goto 跳过声明错误而提升的变量
+		payloadBytes []byte
+		req          *http.Request
+		client       *http.Client
+	)
+
+	// 提前初始化 client，因为 Poll 部分也需要用到它
+	client = &http.Client{Timeout: 30 * time.Second}
+
+	// 2. Send Request / Check if already sent
+	// If RemoteTaskID exists, skip submission and go to polling
+	if task.RemoteTaskID != "" {
+		remoteTaskID = task.RemoteTaskID
+		// Need to reconstruct model info for polling URL generation
+		goto Poll
+	}
+
+	// --- 提交任务逻辑 (使用 assignment = 而不是 declaration :=) ---
+	payloadBytes, _ = json.Marshal(data)
+	req, err = http.NewRequest("POST", modelURL, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("JIEKOU_API")))
 
-	// Add Authorization if needed. For now assume it's either in URL or handled externally
-	// If the user provides headers in model config, we can use them.
+	// Add Authorization if needed.
 	if headers, ok := model["headers"].(map[string]interface{}); ok {
 		for k, v := range headers {
 			if s, ok := v.(string); ok {
@@ -65,8 +89,7 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 		}
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
-	resp, err := client.Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %v", err)
 	}
@@ -77,35 +100,43 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 		return nil, fmt.Errorf("api returned error status: %d, body: %s", resp.StatusCode, string(body))
 	}
 
-	var respData map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&respData); err != nil {
+	// Read body first for debugging
+	bodyBytes, _ = io.ReadAll(resp.Body)
+	fmt.Printf("Jiekou API Response: %s\n", string(bodyBytes))
+
+	if err := json.Unmarshal(bodyBytes, &respData); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 
 	// 3. Extract Task ID
-	// Expecting { "data": { "id": "..." } } or root "id"
-	var remoteTaskID string
 	if d, ok := respData["data"].(map[string]interface{}); ok {
 		if id, ok := d["id"].(string); ok {
 			remoteTaskID = id
 		} else if id, ok := d["task_id"].(string); ok {
 			remoteTaskID = id
+		} else if id, ok := d["id"].(float64); ok {
+			remoteTaskID = fmt.Sprintf("%.0f", id)
+		} else if id, ok := d["task_id"].(float64); ok {
+			remoteTaskID = fmt.Sprintf("%.0f", id)
 		}
 	}
+
 	if remoteTaskID == "" {
 		if id, ok := respData["id"].(string); ok {
 			remoteTaskID = id
 		} else if id, ok := respData["task_id"].(string); ok {
 			remoteTaskID = id
+		} else if id, ok := respData["id"].(float64); ok {
+			remoteTaskID = fmt.Sprintf("%.0f", id)
+		} else if id, ok := respData["task_id"].(float64); ok {
+			remoteTaskID = fmt.Sprintf("%.0f", id)
 		}
 	}
 
+	// Fallback: check if "data" itself is the ID string
 	if remoteTaskID == "" {
-		// Fallback for number ID
-		if d, ok := respData["data"].(map[string]interface{}); ok {
-			if id, ok := d["id"].(float64); ok {
-				remoteTaskID = fmt.Sprintf("%.0f", id)
-			}
+		if idStr, ok := respData["data"].(string); ok {
+			remoteTaskID = idStr
 		}
 	}
 
@@ -113,10 +144,13 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 		return nil, fmt.Errorf("could not find task_id in response: %v", respData)
 	}
 
+	// Update Task with RemoteTaskID
+	task.RemoteTaskID = remoteTaskID
+	database.DB.Save(task)
+
+Poll:
 	// 4. Poll for Status
 	// Construct polling URL
-	// Assume standard pattern: https://api.jiekou.ai/v3/async/tasks/{id} or similar
-	// Or use query_url from response if available
 	queryURL := ""
 	if d, ok := respData["data"].(map[string]interface{}); ok {
 		if url, ok := d["query_url"].(string); ok {
@@ -125,30 +159,13 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 	}
 
 	if queryURL == "" {
-		// Heuristic: Replace "seedance-v1.5-pro-i2v" (or similar) with "tasks/{id}" ???
-		// No, that's risky.
-		// Let's assume a default template if not provided.
-		// "https://api.jiekou.ai/v3/async/tasks/%s"
-		// Check if user provided query_url_template in model config
 		if t, ok := model["query_url_template"].(string); ok && t != "" {
 			queryURL = fmt.Sprintf(t, remoteTaskID)
 		} else {
-			// Try to guess from model_url base
-			// If model_url is https://api.jiekou.ai/v3/async/seedance...,
-			// maybe polling is https://api.jiekou.ai/v3/async/task/{id}
-			// Let's default to a safe guess and hope for the best or error out?
-			// Given I must make it work:
-			// I will assume the user or system knows.
-			// I'll try: https://api.jiekou.ai/v3/async/task/{id}
-			// But for "jiekou.ai", often it is just GET /v3/async/task?id={id} or /v3/async/task/{id}
-			// Let's try: https://api.jiekou.ai/v3/async/task/{id}
-			// Adjust base URL
 			baseURL := "https://api.jiekou.ai/v3/async"
 			if strings.HasPrefix(modelURL, baseURL) {
 				queryURL = baseURL + "/task/" + remoteTaskID
 			} else {
-				// Just append id to model url? Unlikely.
-				// Fallback
 				queryURL = fmt.Sprintf("https://api.jiekou.ai/v3/async/task/%s", remoteTaskID)
 			}
 		}
@@ -180,53 +197,84 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 				fmt.Printf("Polling error: %v\n", err)
 				continue
 			}
-			defer statusResp.Body.Close()
+			// Important: Close body manually inside loop
+			// defer works at function scope, not loop scope, so this would leak without manual close
+			// But since we use ReadAll immediately, we can close immediately.
+
+			bodyBytes, _ := io.ReadAll(statusResp.Body)
+			statusResp.Body.Close() // Explicit close
 
 			var statusData map[string]interface{}
-			bodyBytes, _ := io.ReadAll(statusResp.Body)
 			json.Unmarshal(bodyBytes, &statusData)
 
 			// Check status
-			// Expecting { "data": { "status": "..." } }
-			var innerData map[string]interface{}
-			if d, ok := statusData["data"].(map[string]interface{}); ok {
-				innerData = d
+			var taskInfo map[string]interface{}
+			if t, ok := statusData["task"].(map[string]interface{}); ok {
+				taskInfo = t
 			} else {
-				innerData = statusData
+				if d, ok := statusData["data"].(map[string]interface{}); ok {
+					taskInfo = d
+				} else {
+					taskInfo = statusData
+				}
 			}
 
-			statusVal, _ := innerData["status"].(string)
-			statusVal = strings.ToLower(statusVal)
+			statusVal, _ := taskInfo["status"].(string)
+			statusValUpper := strings.ToUpper(statusVal)
 
-			if statusVal == "success" || statusVal == "completed" || statusVal == "succeeded" {
+			switch statusValUpper {
+			case "TASK_STATUS_SUCCEED", "SUCCESS", "COMPLETED", "SUCCEEDED":
 				// Extract file URL
-				// Try common keys
-				if url, ok := innerData["url"].(string); ok {
-					fileURL = url
-				} else if url, ok := innerData["file_url"].(string); ok {
-					fileURL = url
-				} else if url, ok := innerData["result_url"].(string); ok {
-					fileURL = url
-				} else if url, ok := innerData["output"].(string); ok {
-					fileURL = url
-				}
-
-				if fileURL != "" {
-					goto Download
-				}
-				// Maybe it's in a list?
-				if results, ok := innerData["results"].([]interface{}); ok && len(results) > 0 {
-					if r, ok := results[0].(string); ok {
-						fileURL = r
-						goto Download
+				if videos, ok := statusData["videos"].([]interface{}); ok && len(videos) > 0 {
+					if v, ok := videos[0].(map[string]interface{}); ok {
+						if url, ok := v["video_url"].(string); ok && url != "" {
+							fileURL = url
+							goto Download
+						}
 					}
 				}
 
-				return nil, fmt.Errorf("completed but file url not found in: %v", innerData)
-			} else if statusVal == "failed" || statusVal == "error" {
-				return nil, fmt.Errorf("remote task failed: %v", innerData)
+				if images, ok := statusData["images"].([]interface{}); ok && len(images) > 0 {
+					if img, ok := images[0].(map[string]interface{}); ok {
+						if url, ok := img["image_url"].(string); ok && url != "" {
+							fileURL = url
+							goto Download
+						}
+					}
+				}
+
+				if audios, ok := statusData["audios"].([]interface{}); ok && len(audios) > 0 {
+					if a, ok := audios[0].(map[string]interface{}); ok {
+						if url, ok := a["audio_url"].(string); ok && url != "" {
+							fileURL = url
+							goto Download
+						}
+					}
+				}
+
+				if url, ok := taskInfo["url"].(string); ok && url != "" {
+					fileURL = url
+					goto Download
+				} else if url, ok := taskInfo["file_url"].(string); ok && url != "" {
+					fileURL = url
+					goto Download
+				} else if url, ok := taskInfo["result_url"].(string); ok && url != "" {
+					fileURL = url
+					goto Download
+				} else if url, ok := taskInfo["output"].(string); ok && url != "" {
+					fileURL = url
+					goto Download
+				}
+
+				return nil, fmt.Errorf("completed but file url not found in response: %v", statusData)
+
+			case "TASK_STATUS_FAILED", "FAILED", "ERROR":
+				reason, _ := taskInfo["reason"].(string)
+				return nil, fmt.Errorf("remote task failed: %s (status: %s)", reason, statusVal)
+
+			default:
+				// No op
 			}
-			// Continue polling
 		}
 	}
 
@@ -240,7 +288,6 @@ Download:
 	defer fileResp.Body.Close()
 
 	// 6. Upload to OSS with taskID as filename
-	// Determine extension
 	ext := ".mp4" // Default for video
 	if idx := strings.LastIndex(fileURL, "."); idx != -1 {
 		possibleExt := fileURL[idx:]
@@ -249,10 +296,7 @@ Download:
 		}
 	}
 
-	// Filename is remoteTaskID + ext
 	fileName := remoteTaskID + ext
-
-	// Create temp file
 	tmpName := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%s", uuid.New().String(), fileName))
 	out, err := os.Create(tmpName)
 	if err != nil {
@@ -267,9 +311,6 @@ Download:
 	}
 	defer os.Remove(tmpName)
 
-	// OSS Key: tasks/{remoteTaskID}.ext or tasks/{localID}/{remoteTaskID}.ext
-	// User said "filename is task id".
-	// I'll use tasks/{remoteTaskID}.ext to be safe and clean.
 	ossKey := fmt.Sprintf("tasks/%s", fileName)
 
 	ossURL, err := uploader(tmpName, ossKey)

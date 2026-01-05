@@ -9,7 +9,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 func TestRemoteAPITaskExecutor_Execute(t *testing.T) {
@@ -58,7 +57,7 @@ func TestRemoteAPITaskExecutor_Execute(t *testing.T) {
 	inputBytes, _ := json.Marshal(input)
 
 	task := &models.Task{
-		Model:     gorm.Model{ID: 1},
+		ID:        1,
 		InputData: datatypes.JSON(inputBytes),
 	}
 

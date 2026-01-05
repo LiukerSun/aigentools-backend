@@ -140,8 +140,97 @@ func GetTaskByID(id uint) (*models.Task, error) {
 	return &task, nil
 }
 
+// RetryTask retries a failed or completed task
+func RetryTask(id uint, userID uint) (*models.Task, error) {
+	var task models.Task
+	if err := database.DB.First(&task, id).Error; err != nil {
+		return nil, err
+	}
+
+	// Verify permission (assuming userID matches creator)
+	if task.CreatorID != userID {
+		// In a real app we might check admin role too, but for now strict ownership
+		return nil, errors.New("unauthorized to retry this task")
+	}
+
+	// Check if retryable (Failed or Completed - user wants to re-run?)
+	// Requirement says "check if retryable (like failed/timeout)"
+	// Assuming Completed tasks can also be re-run if user desires, or restrict to Failed?
+	// Let's restrict to Failed or maybe PendingExecution if it got stuck?
+	// Common pattern: Allow retry on Failed.
+	// User input: "检查任务当前状态是否可重试（如失败/超时状态）"
+	if task.Status != models.TaskStatusFailed {
+		return nil, errors.New("task is not in a failed state")
+	}
+
+	// Reset status and counters
+	task.Status = models.TaskStatusPendingExecution
+	task.RetryCount = 0
+	task.ErrorLog = "" // Clear previous error
+	task.ResultURL = ""
+
+	if err := database.DB.Save(&task).Error; err != nil {
+		return nil, err
+	}
+
+	// Push back to Redis
+	if err := database.RedisClient.RPush(database.Ctx, TaskQueueKey, task.ID).Err(); err != nil {
+		return &task, fmt.Errorf("task reset but failed to push to redis: %v", err)
+	}
+
+	return &task, nil
+}
+
+// ResumeProcessingTasks finds tasks stuck in processing state and re-queues them or polls their status
+func ResumeProcessingTasks() {
+	var processingTasks []models.Task
+	// Find tasks that are 'Processing' but not completed.
+	// We might want to filter by updated_at to avoid picking up just-started tasks,
+	// but for startup recovery, we should check all.
+	if err := database.DB.Where("status = ?", models.TaskStatusProcessing).Find(&processingTasks).Error; err != nil {
+		fmt.Printf("Failed to fetch processing tasks: %v\n", err)
+		return
+	}
+
+	fmt.Printf("Found %d tasks in Processing state. Attempting to resume...\n", len(processingTasks))
+
+	for _, task := range processingTasks {
+		// If task has RemoteTaskID, we can add it to PollingManager (to be implemented)
+		// Or push back to Redis for Worker to pick up.
+		// If we push back to Redis, the worker will call executeTaskLogic again.
+		// executeTaskLogic usually starts a new execution (submits new request).
+		// But for Jiekou/Remote tasks, we might want to check status instead of re-submitting if we have RemoteTaskID.
+		// Currently executeTaskLogic doesn't support "Resume" mode directly, it re-executes.
+
+		// Strategy:
+		// 1. If RemoteTaskID exists, it means we submitted successfully. We should poll.
+		// 2. If no RemoteTaskID, maybe it crashed before submission or during submission. Safe to re-try (re-queue).
+
+		if task.RemoteTaskID != "" {
+			fmt.Printf("Task %d has RemoteTaskID %s. Adding to polling queue...\n", task.ID, task.RemoteTaskID)
+			// TODO: Add to PollingManager
+			// For now, we can just push to Redis, but we need executeTaskLogic to handle "already submitted" case?
+			// Or we create a specific "PollTask" function?
+			// Let's implement PollingManager as requested.
+			PollingMgr.Add(task.ID)
+		} else {
+			fmt.Printf("Task %d has no RemoteTaskID. Re-queuing for execution...\n", task.ID)
+			// Reset status to PendingExecution to be picked up by worker normally
+			task.Status = models.TaskStatusPendingExecution
+			database.DB.Save(&task)
+			database.RedisClient.RPush(database.Ctx, TaskQueueKey, task.ID)
+		}
+	}
+}
+
 // StartWorker starts the background worker
 func StartWorker() {
+	// Start Polling Manager
+	go PollingMgr.Start()
+
+	// Resume tasks
+	go ResumeProcessingTasks()
+
 	fmt.Println("Worker started...")
 	for {
 		// BLPop blocks until an item is available
