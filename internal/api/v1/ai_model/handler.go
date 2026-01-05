@@ -4,11 +4,13 @@ import (
 	"aigentools-backend/internal/models"
 	"aigentools-backend/internal/services"
 	"aigentools-backend/internal/utils"
+	"aigentools-backend/pkg/logger"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // GetModels godoc
@@ -189,6 +191,8 @@ func CreateModel(c *gin.Context) {
 		return
 	}
 
+	logger.Log.Info("Received request to create model", zap.String("user", user.Username), zap.String("model_name", req.Name))
+
 	model := models.AIModel{
 		Name:        req.Name,
 		Description: req.Description,
@@ -204,8 +208,10 @@ func CreateModel(c *gin.Context) {
 			"response_parameters": []interface{}{},
 		}
 	}
-
+	logger.Log.Info("Model parameters validated successfully", zap.Any("parameters", model.Parameters))
 	if err := models.ValidateModelParameters(model.Parameters); err != nil {
+		// Log the validation error
+		logger.Log.Warn("Model parameter validation failed", zap.Error(err), zap.Any("parameters", model.Parameters))
 		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid parameters: "+err.Error()))
 		return
 	}

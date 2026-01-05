@@ -3,6 +3,9 @@ package services
 import (
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
+	"aigentools-backend/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 type AIModelFilter struct {
@@ -40,6 +43,7 @@ func FindAIModels(filter AIModelFilter) ([]models.AIModel, int64, error) {
 
 // CreateAIModel creates a new AI model
 func CreateAIModel(model *models.AIModel) error {
+	logger.Log.Info("Creating new AI model", zap.Any("model", model))
 	if err := models.ValidateModelParameters(model.Parameters); err != nil {
 		return err
 	}

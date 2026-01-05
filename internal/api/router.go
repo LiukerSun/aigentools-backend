@@ -10,6 +10,7 @@ import (
 	userRoutes "aigentools-backend/internal/api/v1/user"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/middleware"
+	"aigentools-backend/pkg/logger"
 
 	"github.com/gin-contrib/cors" // Import the cors middleware
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,19 @@ import (
 
 func NewRouter() (*gin.Engine, error) {
 	cfg, err := config.LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Initialize Logger
+	err = logger.InitLogger(&logger.Config{
+		Level:      cfg.LogLevel,
+		Filename:   cfg.LogFilename,
+		MaxSize:    cfg.LogMaxSize,
+		MaxBackups: cfg.LogMaxBackups,
+		MaxAge:     cfg.LogMaxAge,
+		Compress:   cfg.LogCompress,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +47,9 @@ func NewRouter() (*gin.Engine, error) {
 		return nil, err
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(middleware.Logger())
 	router.SetTrustedProxies(nil)
 
 	// Configure CORS
