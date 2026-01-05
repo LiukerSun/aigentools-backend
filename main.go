@@ -4,6 +4,7 @@ import (
 	"aigentools-backend/internal/api"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
+	"aigentools-backend/internal/services"
 	"aigentools-backend/pkg/logger"
 	"log"
 
@@ -42,12 +43,15 @@ func main() {
 	defer logger.Sync()
 
 	// Migrate the schema
-	err = database.DB.AutoMigrate(&models.User{}, &models.Transaction{}, &models.AIModel{})
+	err = database.DB.AutoMigrate(&models.User{}, &models.Transaction{}, &models.AIModel{}, &models.Task{})
 	if err != nil {
 		logger.Log.Fatal("failed to migrate database", zap.Error(err))
 	}
 
 	initAdminUser()
+
+	// Start Worker
+	go services.StartWorker()
 
 	if err := router.Run(":8080"); err != nil {
 		logger.Log.Fatal("failed to run server", zap.Error(err))

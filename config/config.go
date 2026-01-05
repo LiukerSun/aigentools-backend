@@ -34,6 +34,9 @@ type Config struct {
 	LogMaxBackups int
 	LogMaxAge     int
 	LogCompress   bool
+
+	// Task Configuration
+	AutoAudit bool
 }
 
 func (c *Config) DSN() string {
@@ -78,6 +81,8 @@ func LoadConfig() (*Config, error) {
 		LogMaxBackups: getEnvAsInt("LOG_MAX_BACKUPS", 3),
 		LogMaxAge:     getEnvAsInt("LOG_MAX_AGE", 28),
 		LogCompress:   getEnvAsBool("LOG_COMPRESS", true),
+
+		AutoAudit: getEnvAsBool("AUTO_AUDIT", false),
 	}, nil
 }
 

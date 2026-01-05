@@ -8,6 +8,7 @@ import (
 	aiModel "aigentools-backend/internal/api/v1/ai_model"
 	"aigentools-backend/internal/api/v1/auth"
 	"aigentools-backend/internal/api/v1/common/upload"
+	"aigentools-backend/internal/api/v1/task"
 	userRoutes "aigentools-backend/internal/api/v1/user"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/middleware"
@@ -72,6 +73,7 @@ func NewRouter() (*gin.Engine, error) {
 		auth.RegisterRoutes(v1)
 		aiModel.RegisterRoutes(v1)
 		upload.RegisterRoutes(v1)
+		task.RegisterRoutes(v1)
 
 		authorized := v1.Group("/")
 		authorized.Use(middleware.AuthMiddleware())

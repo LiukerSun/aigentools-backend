@@ -120,6 +120,14 @@ definitions:
     - password
     - username
     type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
   models.AIModelStatus:
     enum:
     - open
@@ -133,6 +141,49 @@ definitions:
   models.JSON:
     additionalProperties: true
     type: object
+  models.Task:
+    properties:
+      createdAt:
+        type: string
+      creator_id:
+        type: integer
+      creator_name:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      error_log:
+        type: string
+      id:
+        type: integer
+      input_data:
+        items:
+          type: integer
+        type: array
+      max_retries:
+        type: integer
+      result_url:
+        type: string
+      retry_count:
+        type: integer
+      status:
+        $ref: '#/definitions/models.TaskStatus'
+      updatedAt:
+        type: string
+    type: object
+  models.TaskStatus:
+    enum:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    type: integer
+    x-enum-varnames:
+    - TaskStatusPendingAudit
+    - TaskStatusPendingExecution
+    - TaskStatusProcessing
+    - TaskStatusCompleted
+    - TaskStatusFailed
   models.TransactionType:
     enum:
     - admin_adjustment
@@ -159,6 +210,42 @@ definitions:
         type: string
       securityToken:
         type: string
+    type: object
+  task.CreateTaskRequest:
+    properties:
+      body:
+        additionalProperties: true
+        type: object
+      user:
+        properties:
+          creatorId:
+            type: integer
+          creatorName:
+            type: string
+        required:
+        - creatorId
+        - creatorName
+        type: object
+    required:
+    - body
+    - user
+    type: object
+  task.TaskListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Task'
+        type: array
+      total:
+        type: integer
+    type: object
+  task.UpdateTaskRequest:
+    properties:
+      body:
+        additionalProperties: true
+        type: object
+    required:
+    - body
     type: object
   transaction.TransactionListItem:
     properties:
@@ -1043,6 +1130,170 @@ paths:
       summary: Get list of all AI models (simplified)
       tags:
       - models
+  /tasks:
+    get:
+      description: List tasks with pagination and filtering
+      parameters:
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Page size (default 10)
+        in: query
+        name: page_size
+        type: integer
+      - description: Creator ID
+        in: query
+        name: creator_id
+        type: integer
+      - description: Task Status
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/task.TaskListResponse'
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: List tasks
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      description: Submit a new task with body and user information
+      parameters:
+      - description: Task creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/task.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Submit a new task
+      tags:
+      - tasks
+  /tasks/{id}:
+    get:
+      description: Get a single task by ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Get task detail
+      tags:
+      - tasks
+    put:
+      consumes:
+      - application/json
+      description: Update task input data (only if not yet processing)
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Task update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/task.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Update task parameters
+      tags:
+      - tasks
+  /tasks/{id}/approve:
+    patch:
+      description: Approve a pending audit task and push it to the execution queue
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Approve a task
+      tags:
+      - tasks
 securityDefinitions:
   Bearer:
     description: Type "Bearer" followed by a space and JWT token.
