@@ -177,32 +177,56 @@ func processTask(taskID uint) {
 
 	fmt.Printf("Processing task %d...\n", taskID)
 
-	// Simulate execution
-	err := executeTaskLogic(&task)
+	result, err := executeTaskLogic(&task)
 
 	if err != nil {
 		fmt.Printf("Task %d failed: %v\n", taskID, err)
 		handleFailure(&task, err)
 	} else {
+		if hookErr := runAfterExecutionHooks(&task, result); hookErr != nil {
+			fmt.Printf("Task %d after hooks error: %v\n", taskID, hookErr)
+		}
 		fmt.Printf("Task %d completed\n", taskID)
 		task.Status = models.TaskStatusCompleted
-		task.ResultURL = fmt.Sprintf("http://oss.example.com/result/%d", taskID)
+
+		// Use OSS URL if available, otherwise fallback to simulated
+		if ossURL, ok := result["oss_url"].(string); ok && ossURL != "" {
+			task.ResultURL = ossURL
+		} else if resultURL, ok := result["result_url"].(string); ok && resultURL != "" {
+			task.ResultURL = resultURL
+		} else {
+			task.ResultURL = fmt.Sprintf("http://oss.example.com/result/%d", taskID)
+		}
+
 		database.DB.Save(&task)
 	}
 }
 
-func executeTaskLogic(task *models.Task) error {
+func executeTaskLogic(task *models.Task) (map[string]interface{}, error) {
 	time.Sleep(5 * time.Second)
 
 	// Simulate failure if input contains "fail"
 	var input map[string]interface{}
 	json.Unmarshal(task.InputData, &input)
 
-	if prompt, ok := input["prompt"].(string); ok && strings.Contains(prompt, "fail") {
-		return errors.New("simulated execution failure")
+	if name, ok := input["executor"].(string); ok && name != "" {
+		if ex := getExecutor(name); ex != nil {
+			return ex.Execute(task)
+		}
 	}
 
-	return nil
+	// Auto-detect Jiekou/Model task structure
+	if _, ok := input["model"]; ok {
+		if ex := getExecutor("jiekou_api"); ex != nil {
+			return ex.Execute(task)
+		}
+	}
+
+	if prompt, ok := input["prompt"].(string); ok && strings.Contains(prompt, "fail") {
+		return nil, errors.New("simulated failure")
+	}
+
+	return map[string]interface{}{"status": "ok"}, nil
 }
 
 func handleFailure(task *models.Task, err error) {
