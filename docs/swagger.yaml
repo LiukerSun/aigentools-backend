@@ -16,6 +16,8 @@ definitions:
         $ref: '#/definitions/models.AIModelStatus'
       updated_at:
         type: string
+      url:
+        type: string
     type: object
   ai_model.AIModelListResponse:
     properties:
@@ -45,6 +47,8 @@ definitions:
         - open
         - closed
         - draft
+      url:
+        type: string
     required:
     - name
     - status
@@ -64,6 +68,8 @@ definitions:
         - open
         - closed
         - draft
+      url:
+        type: string
     type: object
   ai_model.UpdateStatusRequest:
     properties:

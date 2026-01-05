@@ -277,3 +277,93 @@ func TestCreateModel(t *testing.T) {
 		})
 	}
 }
+
+func TestCreateModelURL(t *testing.T) {
+	setupTestDB()
+	gin.SetMode(gin.TestMode)
+
+	adminUser := models.User{Username: "admin", Role: "admin"}
+	database.DB.Create(&adminUser)
+
+	t.Run("Admin creates model with URL", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		// Mock auth
+		c.Set("user", adminUser)
+
+		payload := ai_model.CreateModelRequest{
+			Name:        "Model With URL",
+			Description: "Description",
+			Status:      models.AIModelStatusDraft,
+			URL:         "https://api.example.com/v1/chat",
+		}
+
+		jsonBytes, _ := json.Marshal(payload)
+		c.Request, _ = http.NewRequest("POST", "/models/create", bytes.NewBuffer(jsonBytes))
+
+		ai_model.CreateModel(c)
+
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var resp struct {
+			Status int                      `json:"status"`
+			Msg    string                   `json:"msg"`
+			Data   ai_model.AIModelListItem `json:"data"`
+		}
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, "https://api.example.com/v1/chat", resp.Data.URL)
+		assert.Equal(t, "Model With URL", resp.Data.Name)
+	})
+}
+
+func TestUpdateModelURL(t *testing.T) {
+	setupTestDB()
+	gin.SetMode(gin.TestMode)
+
+	adminUser := models.User{Username: "admin", Role: "admin"}
+	database.DB.Create(&adminUser)
+
+	model := models.AIModel{
+		Name:   "Original Model",
+		Status: models.AIModelStatusDraft,
+		URL:    "http://original.com",
+		Parameters: models.JSON{
+			"request_header":      []interface{}{},
+			"request_body":        []interface{}{},
+			"response_parameters": []interface{}{},
+		},
+	}
+	database.DB.Create(&model)
+
+	t.Run("Admin updates model URL", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+
+		// Mock auth
+		c.Set("user", adminUser)
+		c.Params = []gin.Param{{Key: "id", Value: "1"}}
+
+		payload := ai_model.UpdateModelRequest{
+			URL: "https://updated.com/api",
+		}
+
+		jsonBytes, _ := json.Marshal(payload)
+		c.Request, _ = http.NewRequest("PUT", "/models/1", bytes.NewBuffer(jsonBytes))
+
+		ai_model.UpdateModel(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp struct {
+			Status int                      `json:"status"`
+			Msg    string                   `json:"msg"`
+			Data   ai_model.AIModelListItem `json:"data"`
+		}
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, "https://updated.com/api", resp.Data.URL)
+		assert.Equal(t, "Original Model", resp.Data.Name) // Name should remain unchanged
+	})
+}

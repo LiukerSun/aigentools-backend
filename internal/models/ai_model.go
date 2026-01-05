@@ -16,6 +16,7 @@ type AIModel struct {
 	UpdatedAt   time.Time     `json:"updated_at"`
 	Name        string        `gorm:"index;not null" json:"name"`
 	Description string        `json:"description"`
+	URL         string        `json:"url"`
 	Status      AIModelStatus `gorm:"index;not null;default:'draft'" json:"status"`
 	Parameters  JSON          `gorm:"type:jsonb;not null;default:'{}'" json:"parameters"`
 }

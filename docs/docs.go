@@ -1053,6 +1053,9 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -1103,6 +1106,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.AIModelStatus"
                         }
                     ]
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -1129,6 +1135,9 @@ const docTemplate = `{
                             "$ref": "#/definitions/models.AIModelStatus"
                         }
                     ]
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },

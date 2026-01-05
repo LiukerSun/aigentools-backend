@@ -10,6 +10,7 @@ type AIModelListItem struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
 	Status      models.AIModelStatus `json:"status"`
+	URL         string               `json:"url"`
 	Parameters  models.JSON          `json:"parameters"`
 	CreatedAt   time.Time            `json:"created_at"`
 	UpdatedAt   time.Time            `json:"updated_at"`
@@ -30,6 +31,7 @@ type UpdateModelRequest struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
 	Status      models.AIModelStatus `json:"status" binding:"omitempty,oneof=open closed draft"`
+	URL         string               `json:"url"`
 	Parameters  models.JSON          `json:"parameters"`
 }
 
@@ -37,5 +39,6 @@ type CreateModelRequest struct {
 	Name        string               `json:"name" binding:"required"`
 	Description string               `json:"description"`
 	Status      models.AIModelStatus `json:"status" binding:"required,oneof=open closed draft"`
+	URL         string               `json:"url"`
 	Parameters  models.JSON          `json:"parameters"`
 }

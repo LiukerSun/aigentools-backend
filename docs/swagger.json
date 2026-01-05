@@ -1047,6 +1047,9 @@
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -1097,6 +1100,9 @@
                             "$ref": "#/definitions/models.AIModelStatus"
                         }
                     ]
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },
@@ -1123,6 +1129,9 @@
                             "$ref": "#/definitions/models.AIModelStatus"
                         }
                     ]
+                },
+                "url": {
+                    "type": "string"
                 }
             }
         },

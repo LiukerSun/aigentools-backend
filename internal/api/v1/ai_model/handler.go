@@ -86,6 +86,7 @@ func GetModels(c *gin.Context) {
 			Name:        m.Name,
 			Description: m.Description,
 			Status:      m.Status,
+			URL:         m.URL,
 			Parameters:  m.Parameters,
 			CreatedAt:   m.CreatedAt,
 			UpdatedAt:   m.UpdatedAt,
@@ -192,6 +193,7 @@ func CreateModel(c *gin.Context) {
 		Name:        req.Name,
 		Description: req.Description,
 		Status:      req.Status,
+		URL:         req.URL,
 		Parameters:  req.Parameters,
 	}
 
@@ -221,6 +223,7 @@ func CreateModel(c *gin.Context) {
 		Name:        model.Name,
 		Description: model.Description,
 		Status:      model.Status,
+		URL:         model.URL,
 		Parameters:  model.Parameters,
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
@@ -285,6 +288,9 @@ func UpdateModel(c *gin.Context) {
 	if req.Status != "" {
 		model.Status = req.Status
 	}
+	if req.URL != "" {
+		model.URL = req.URL
+	}
 	if req.Parameters != nil {
 		model.Parameters = req.Parameters
 		if err := models.ValidateModelParameters(model.Parameters); err != nil {
@@ -305,6 +311,7 @@ func UpdateModel(c *gin.Context) {
 		Name:        model.Name,
 		Description: model.Description,
 		Status:      model.Status,
+		URL:         model.URL,
 		Parameters:  model.Parameters,
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,

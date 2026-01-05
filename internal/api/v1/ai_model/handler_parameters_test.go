@@ -38,6 +38,7 @@ func TestCreateModelWithParameters(t *testing.T) {
 			Name:        "GPT-4-Test",
 			Description: "Advanced model",
 			Status:      models.AIModelStatusOpen,
+			URL:         "https://api.openai.com/v1/chat/completions",
 			Parameters:  models.JSON(params),
 		}
 		body, _ := json.Marshal(req)
