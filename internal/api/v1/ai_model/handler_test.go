@@ -4,19 +4,27 @@ import (
 	"aigentools-backend/internal/api/v1/ai_model"
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
+	"aigentools-backend/pkg/logger"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func setupTestDB() {
+	// Initialize logger for tests
+	logger.Log = zap.NewNop()
+
 	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect database")
@@ -29,6 +37,84 @@ func setupTestDB() {
 	}
 
 	database.DB = db
+}
+
+func setupTestRedis() *miniredis.Miniredis {
+	mr, err := miniredis.Run()
+	if err != nil {
+		panic(err)
+	}
+
+	database.RedisClient = redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	return mr
+}
+
+func TestGetModelNames(t *testing.T) {
+	setupTestDB()
+	gin.SetMode(gin.TestMode)
+
+	modelsList := []models.AIModel{
+		{Name: "Model A", Status: models.AIModelStatusOpen},
+		{Name: "Model B", Status: models.AIModelStatusOpen},
+	}
+	database.DB.Create(&modelsList)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("GET", "/models/names", nil)
+
+	ai_model.GetModelNames(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp struct {
+		Status int                          `json:"status"`
+		Data   []ai_model.AIModelSimpleItem `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, 200, resp.Status)
+	assert.Len(t, resp.Data, 2)
+
+	// Verify content
+	names := []string{resp.Data[0].Name, resp.Data[1].Name}
+	assert.Contains(t, names, "Model A")
+	assert.Contains(t, names, "Model B")
+
+	// Verify structure
+	assert.NotEmpty(t, resp.Data[0].ID)
+	assert.NotEmpty(t, resp.Data[0].Status)
+}
+
+func TestGetModelParameters(t *testing.T) {
+	setupTestDB()
+	mr := setupTestRedis()
+	defer mr.Close()
+	gin.SetMode(gin.TestMode)
+
+	params := models.JSON{"key": "value"}
+	model := models.AIModel{
+		Name:       "Param Model",
+		Status:     models.AIModelStatusOpen,
+		Parameters: params,
+	}
+	database.DB.Create(&model)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: fmt.Sprint(model.ID)}}
+	c.Request, _ = http.NewRequest("GET", "/models/"+fmt.Sprint(model.ID)+"/parameters", nil)
+
+	ai_model.GetModelParameters(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp struct {
+		Status int         `json:"status"`
+		Data   models.JSON `json:"data"`
+	}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, 200, resp.Status)
+	assert.Equal(t, "value", resp.Data["key"])
 }
 
 func TestGetModels(t *testing.T) {

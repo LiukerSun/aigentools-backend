@@ -238,6 +238,78 @@ func CreateModel(c *gin.Context) {
 	c.JSON(http.StatusCreated, utils.NewSuccessResponse("Model created successfully", responseItem))
 }
 
+// GetModelNames godoc
+// @Summary Get list of all AI models (simplified)
+// @Description Retrieve a list of all AI models with basic details (excluding parameters).
+// @Tags models
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} utils.Response{data=[]AIModelSimpleItem}
+// @Failure 500 {object} utils.Response
+// @Router /models/names [get]
+func GetModelNames(c *gin.Context) {
+	modelsList, err := services.GetAllModelsSimple()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch models"))
+		return
+	}
+
+	var responseItems []AIModelSimpleItem
+	for _, m := range modelsList {
+		responseItems = append(responseItems, AIModelSimpleItem{
+			ID:          m.ID,
+			Name:        m.Name,
+			Description: m.Description,
+			Status:      m.Status,
+			URL:         m.URL,
+			CreatedAt:   m.CreatedAt,
+			UpdatedAt:   m.UpdatedAt,
+		})
+	}
+	// Ensure non-nil slice for empty result
+	if responseItems == nil {
+		responseItems = []AIModelSimpleItem{}
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Success", responseItems))
+}
+
+// GetModelParameters godoc
+// @Summary Get AI model parameters by ID
+// @Description Retrieve the parameters of an AI model by its ID.
+// @Tags models
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "Model ID"
+// @Success 200 {object} utils.Response{data=models.JSON}
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /models/{id}/parameters [get]
+func GetModelParameters(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil || id < 1 {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid model ID"))
+		return
+	}
+
+	params, err := services.GetModelParametersByID(uint(id))
+	if err != nil {
+		// Check if it's a "record not found" error
+		if err.Error() == "record not found" {
+			c.JSON(http.StatusNotFound, utils.NewErrorResponse(http.StatusNotFound, "Model not found"))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, "Failed to fetch model parameters"))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Success", params))
+}
+
 // UpdateModel godoc
 // @Summary Update an existing AI model
 // @Description Update AI model details. Admin only.

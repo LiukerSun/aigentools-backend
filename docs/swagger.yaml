@@ -32,6 +32,23 @@ definitions:
       total:
         type: integer
     type: object
+  ai_model.AIModelSimpleItem:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/models.AIModelStatus'
+      updated_at:
+        type: string
+      url:
+        type: string
+    type: object
   ai_model.CreateModelRequest:
     properties:
       description:
@@ -359,7 +376,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: List transactions
       tags:
       - admin
@@ -462,7 +479,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: List all users
       tags:
       - admin
@@ -503,7 +520,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Delete a user
       tags:
       - admin
@@ -556,7 +573,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Update a user
       tags:
       - admin
@@ -611,7 +628,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Adjust user balance (Credit/Debit)
       tags:
       - admin
@@ -736,7 +753,7 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       security:
-      - Bearer: []
+      - BearerAuth: []
       summary: Get current user
       tags:
       - user
@@ -785,6 +802,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
       summary: Get list of AI models
       tags:
       - models
@@ -833,7 +852,49 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
       summary: Update an existing AI model
+      tags:
+      - models
+  /models/{id}/parameters:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the parameters of an AI model by its ID.
+      parameters:
+      - description: Model ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.JSON'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Get AI model parameters by ID
       tags:
       - models
   /models/{id}/status:
@@ -876,6 +937,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
       summary: Update AI model status
       tags:
       - models
@@ -919,11 +982,44 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
       summary: Create a new AI model
       tags:
       - models
+  /models/names:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of all AI models with basic details (excluding
+        parameters).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/ai_model.AIModelSimpleItem'
+                  type: array
+              type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      security:
+      - BearerAuth: []
+      summary: Get list of all AI models (simplified)
+      tags:
+      - models
 securityDefinitions:
-  Bearer:
+  BasicAuth:
+    type: basic
+  BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization

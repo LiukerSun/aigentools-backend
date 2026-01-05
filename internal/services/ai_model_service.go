@@ -4,7 +4,11 @@ import (
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
 	"aigentools-backend/pkg/logger"
+	"encoding/json"
+	"fmt"
+	"time"
 
+	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 )
 
@@ -70,4 +74,51 @@ func GetAIModelByID(id uint) (*models.AIModel, error) {
 // UpdateModelStatus updates the status of a model
 func UpdateModelStatus(id uint, status models.AIModelStatus) error {
 	return database.DB.Model(&models.AIModel{}).Where("id = ?", id).Update("status", status).Error
+}
+
+// GetAllModelsSimple retrieves all AI models without parameters
+func GetAllModelsSimple() ([]models.AIModel, error) {
+	var modelsList []models.AIModel
+	// Select all columns except parameters
+	// Explicitly selecting columns is better than trying to omit
+	if err := database.DB.Select("id, name, description, status, url, created_at, updated_at").Find(&modelsList).Error; err != nil {
+		return nil, err
+	}
+	return modelsList, nil
+}
+
+// GetModelParametersByID retrieves model parameters by ID with caching
+func GetModelParametersByID(id uint) (models.JSON, error) {
+	// Try to get from cache
+	cacheKey := fmt.Sprintf("model_params:%d", id)
+	val, err := database.RedisClient.Get(database.Ctx, cacheKey).Result()
+	if err == nil {
+		var params models.JSON
+		if err := json.Unmarshal([]byte(val), &params); err == nil {
+			return params, nil
+		}
+		// If unmarshal fails, log and continue to fetch from DB
+		logger.Log.Error("Failed to unmarshal cached parameters", zap.Error(err))
+	} else if err != redis.Nil {
+		// Log error but continue to DB
+		logger.Log.Error("Failed to get from cache", zap.Error(err))
+	}
+
+	// Get from DB
+	var model models.AIModel
+	if err := database.DB.Select("parameters").First(&model, id).Error; err != nil {
+		return nil, err
+	}
+
+	// Save to cache
+	paramsJSON, err := json.Marshal(model.Parameters)
+	if err == nil {
+		if err := database.RedisClient.Set(database.Ctx, cacheKey, paramsJSON, time.Hour).Err(); err != nil {
+			logger.Log.Error("Failed to set cache", zap.Error(err))
+		}
+	} else {
+		logger.Log.Error("Failed to marshal parameters for cache", zap.Error(err))
+	}
+
+	return model.Parameters, nil
 }
