@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: aigentools-backend
+    ports:
+      - "8080:8080"
+    # 加载 .env 文件中的变量
+    env_file:
+      - .env
+    environment:
+      # Redis 依然使用容器内的别名
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # 数据库配置将直接读取 .env 文件或宿主机环境变量
+      # 如果连接宿主机上的数据库，DB_HOST 请使用 host.docker.internal
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: aigentools-redis
+    networks:
+      - app-network
+    restart: always
+
+networks:
+  app-network:
+    driver: bridge
