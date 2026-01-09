@@ -265,6 +265,7 @@ func GetModelNames(c *gin.Context) {
 			Name:        m.Name,
 			Description: m.Description,
 			Status:      m.Status,
+			Price:       m.Price,
 			URL:         m.URL,
 			CreatedAt:   m.CreatedAt,
 			UpdatedAt:   m.UpdatedAt,
