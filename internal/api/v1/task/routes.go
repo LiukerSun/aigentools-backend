@@ -14,6 +14,7 @@ func RegisterRoutes(router *gin.RouterGroup) {
 		tasks.GET("", ListTasks)
 		tasks.GET("/:id", GetTaskDetail)
 		tasks.POST("/:id/retry", RetryTask)
+		tasks.POST("/:id/cancel", CancelTask)
 		tasks.PATCH("/:id/approve", ApproveTask)
 		tasks.PUT("/:id", UpdateTask)
 	}

@@ -15,6 +15,7 @@ const (
 	TaskStatusProcessing       TaskStatus = 3
 	TaskStatusCompleted        TaskStatus = 4
 	TaskStatusFailed           TaskStatus = 5
+	TaskStatusCancelled        TaskStatus = 6
 )
 
 // Task represents a task in the system

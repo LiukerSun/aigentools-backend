@@ -181,6 +181,31 @@ func RetryTask(id uint, userID uint) (*models.Task, error) {
 	return &task, nil
 }
 
+// CancelTask cancels a task
+func CancelTask(id uint, userID uint) (*models.Task, error) {
+	var task models.Task
+	if err := database.DB.First(&task, id).Error; err != nil {
+		return nil, err
+	}
+
+	// Verify permission
+	if task.CreatorID != userID {
+		return nil, errors.New("unauthorized to cancel this task")
+	}
+
+	// Check if cancellable
+	if task.Status == models.TaskStatusCompleted || task.Status == models.TaskStatusFailed || task.Status == models.TaskStatusCancelled {
+		return nil, errors.New("task cannot be cancelled in its current state")
+	}
+
+	task.Status = models.TaskStatusCancelled
+	if err := database.DB.Save(&task).Error; err != nil {
+		return nil, err
+	}
+
+	return &task, nil
+}
+
 // ResumeProcessingTasks finds tasks stuck in processing state and re-queues them or polls their status
 func ResumeProcessingTasks() {
 	var processingTasks []models.Task

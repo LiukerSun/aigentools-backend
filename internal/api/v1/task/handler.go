@@ -114,7 +114,7 @@ func UpdateTask(c *gin.Context) {
 func ListTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	
+
 	userVal, exists := c.Get("user")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, utils.NewErrorResponse(http.StatusUnauthorized, "User not authenticated"))
@@ -131,7 +131,7 @@ func ListTasks(c *gin.Context) {
 		// Regular user can only see their own tasks
 		creatorID = user.ID
 	}
-	
+
 	var status *models.TaskStatus
 	if statusStr := c.Query("status"); statusStr != "" {
 		s, err := strconv.Atoi(statusStr)
@@ -219,4 +219,45 @@ func RetryTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, utils.NewSuccessResponse("Task retried successfully", task))
+}
+
+// CancelTask godoc
+// @Summary Cancel a task
+// @Description Cancel a task that is pending or processing
+// @Tags tasks
+// @Produce json
+// @Param id path int true "Task ID"
+// @Success 200 {object} utils.Response{data=models.Task}
+// @Failure 403 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Failure 500 {object} utils.Response
+// @Router /tasks/{id}/cancel [post]
+func CancelTask(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid task ID"))
+		return
+	}
+
+	user, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.NewErrorResponse(http.StatusUnauthorized, "Unauthorized"))
+		return
+	}
+	currentUser := user.(models.User)
+
+	task, err := services.CancelTask(uint(id), currentUser.ID)
+	if err != nil {
+		if err.Error() == "unauthorized to cancel this task" {
+			c.JSON(http.StatusForbidden, utils.NewErrorResponse(http.StatusForbidden, err.Error()))
+		} else if err.Error() == "task cannot be cancelled in its current state" {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, err.Error()))
+		} else {
+			c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, err.Error()))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.NewSuccessResponse("Task cancelled successfully", task))
 }

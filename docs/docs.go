@@ -1508,6 +1508,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/tasks/{id}/cancel": {
+            "post": {
+                "description": "Cancel a task that is pending or processing",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tasks"
+                ],
+                "summary": "Cancel a task",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/models.Task"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/tasks/{id}/retry": {
             "post": {
                 "description": "Retry a task that has failed",
@@ -1851,14 +1910,16 @@ const docTemplate = `{
                 2,
                 3,
                 4,
-                5
+                5,
+                6
             ],
             "x-enum-varnames": [
                 "TaskStatusPendingAudit",
                 "TaskStatusPendingExecution",
                 "TaskStatusProcessing",
                 "TaskStatusCompleted",
-                "TaskStatusFailed"
+                "TaskStatusFailed",
+                "TaskStatusCancelled"
             ]
         },
         "models.TransactionType": {

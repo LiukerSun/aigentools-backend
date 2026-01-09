@@ -187,6 +187,7 @@ definitions:
     - 3
     - 4
     - 5
+    - 6
     type: integer
     x-enum-varnames:
     - TaskStatusPendingAudit
@@ -194,6 +195,7 @@ definitions:
     - TaskStatusProcessing
     - TaskStatusCompleted
     - TaskStatusFailed
+    - TaskStatusCancelled
   models.TransactionType:
     enum:
     - admin_adjustment
@@ -1338,6 +1340,42 @@ paths:
           schema:
             $ref: '#/definitions/utils.Response'
       summary: Approve a task
+      tags:
+      - tasks
+  /tasks/{id}/cancel:
+    post:
+      description: Cancel a task that is pending or processing
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/models.Task'
+              type: object
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Cancel a task
       tags:
       - tasks
   /tasks/{id}/retry:
