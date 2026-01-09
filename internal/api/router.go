@@ -3,6 +3,7 @@ package api
 import (
 	"aigentools-backend/config"
 	_ "aigentools-backend/docs"
+	"aigentools-backend/internal/api/test"
 	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
 	aiAssistant "aigentools-backend/internal/api/v1/ai_assistant"
@@ -73,6 +74,9 @@ func NewRouter() (*gin.Engine, error) {
 	// API v1
 	v1 := router.Group("/api/v1")
 	{
+		// Test routes
+		test.RegisterRoutes(v1)
+
 		auth.RegisterRoutes(v1)
 		aiModel.RegisterRoutes(v1)
 		upload.RegisterRoutes(v1)

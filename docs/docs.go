@@ -1625,6 +1625,52 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/test/task": {
+            "post": {
+                "description": "Create a test task and get a fixed task ID back.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "test"
+                ],
+                "summary": "Create a test task",
+                "parameters": [
+                    {
+                        "description": "Test task creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/test.TestCreateTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/test.TestTaskResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1721,6 +1767,9 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "price": {
+                    "type": "number"
                 },
                 "status": {
                     "$ref": "#/definitions/models.AIModelStatus"
@@ -2020,6 +2069,41 @@ const docTemplate = `{
                 "body": {
                     "type": "object",
                     "additionalProperties": true
+                }
+            }
+        },
+        "test.TestCreateTaskRequest": {
+            "type": "object",
+            "required": [
+                "duration",
+                "image",
+                "modelId",
+                "prompt",
+                "ratio"
+            ],
+            "properties": {
+                "duration": {
+                    "type": "integer"
+                },
+                "image": {
+                    "type": "string"
+                },
+                "modelId": {
+                    "type": "integer"
+                },
+                "prompt": {
+                    "type": "string"
+                },
+                "ratio": {
+                    "type": "string"
+                }
+            }
+        },
+        "test.TestTaskResponse": {
+            "type": "object",
+            "properties": {
+                "task_id": {
+                    "type": "string"
                 }
             }
         },

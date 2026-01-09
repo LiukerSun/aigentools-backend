@@ -164,6 +164,40 @@ func ListTasks(c *gin.Context) {
 // @Router /tasks/{id} [get]
 func GetTaskDetail(c *gin.Context) {
 	idStr := c.Param("id")
+
+	if idStr == "1111-2222-3333-4444" {
+		c.JSON(http.StatusOK, utils.NewSuccessResponse("Task retrieved successfully", gin.H{
+			"extra": gin.H{
+				"seed": "some-seed",
+				"debug_info": gin.H{
+					"request_info":     "some-request-info",
+					"submit_time_ms":   "100",
+					"execute_time_ms":  "200",
+					"complete_time_ms": "300",
+				},
+			},
+			"task": gin.H{
+				"task_id":          "1111-2222-3333-4444",
+				"status":           "completed",
+				"reason":           "success",
+				"task_type":        "test",
+				"eta":              0,
+				"progress_percent": 100,
+			},
+			"images": []gin.H{},
+			"videos": []gin.H{
+				{
+					"video_url":     "https://aigentools.oss-cn-beijing.aliyuncs.com/tasks/95fef7fc-77ca-4d5d-9734-c4c3ed3a1877.mp4",
+					"video_url_ttl": 3600,
+					"video_type":    "mp4",
+				},
+			},
+			"audios": []gin.H{},
+		}))
+
+		return
+	}
+
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid task ID"))

@@ -55,6 +55,7 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 		bodyBytes    []byte
 		resp         *http.Response
 		err          error
+		queryURL     string
 		// 以下是为了解决 goto 跳过声明错误而提升的变量
 		payloadBytes []byte
 		req          *http.Request
@@ -152,7 +153,6 @@ func (e JiekouExecutor) Execute(task *models.Task) (map[string]interface{}, erro
 Poll:
 	// 4. Poll for Status
 	// Construct polling URL
-	queryURL := ""
 	if d, ok := respData["data"].(map[string]interface{}); ok {
 		if url, ok := d["query_url"].(string); ok {
 			queryURL = url
@@ -180,6 +180,12 @@ Poll:
 		case <-timeout:
 			return nil, errors.New("task polling timed out")
 		case <-ticker.C:
+			if remoteTaskID == "1111-2222-3333-4444" {
+				// This is the special task, mock the polling response by considering it complete
+				// and jump to the download (which is also mocked).
+				fileURL = "https://aigentools.oss-cn-beijing.aliyuncs.com/tasks/95fef7fc-77ca-4d5d-9734-c4c3ed3a1877.mp4" // Set a dummy original_url
+				goto Download
+			}
 			statusReq, _ := http.NewRequest("GET", queryURL, nil)
 			// add headers
 			statusReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("JIEKOU_API")))
@@ -272,6 +278,14 @@ Poll:
 	}
 
 Download:
+	if remoteTaskID == "1111-2222-3333-4444" {
+		return map[string]interface{}{
+			"oss_url":        "https://aigentools.oss-cn-beijing.aliyuncs.com/tasks/95fef7fc-77ca-4d5d-9734-c4c3ed3a1877.mp4",
+			"original_url":   fileURL,
+			"remote_task_id": remoteTaskID,
+		}, nil
+	}
+
 	// 5. Download File
 	fmt.Printf("Downloading file from %s...\n", fileURL)
 	fileResp, err := http.Get(fileURL)
