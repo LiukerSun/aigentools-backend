@@ -102,7 +102,7 @@ func CreatePaymentOrder(userID uint, amount float64, paymentUUID string) (*model
 	return order, nil
 }
 
-func GetPaymentJumpURL(orderID string, paymentMethodUUID string, notifyBaseURL string, returnURL string) (string, error) {
+func GetPaymentJumpURL(orderID string, paymentMethodUUID string, paymentChannel string, notifyBaseURL string, returnURL string) (string, error) {
 	var config models.PaymentConfig
 	if err := database.DB.Where("uuid = ?", paymentMethodUUID).First(&config).Error; err != nil {
 		return "", err
@@ -139,7 +139,11 @@ func GetPaymentJumpURL(orderID string, paymentMethodUUID string, notifyBaseURL s
 	// Construct Notify URL with UUID
 	fullNotifyURL := fmt.Sprintf("%s/%s", strings.TrimRight(notifyBaseURL, "/"), config.UUID)
 
-	return driver.Pay(order.ID, order.Amount, fullNotifyURL, returnURL, nil)
+	params := map[string]interface{}{
+		"type": paymentChannel,
+	}
+
+	return driver.Pay(order.ID, order.Amount, fullNotifyURL, returnURL, params)
 }
 
 func HandlePaymentNotify(paymentUUID string, params map[string]interface{}) error {

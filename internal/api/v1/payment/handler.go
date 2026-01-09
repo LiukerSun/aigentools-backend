@@ -70,7 +70,7 @@ func (h *Handler) CreatePayment(c *gin.Context) {
 	host := c.Request.Host
 	notifyBaseURL := scheme + "://" + host + "/api/v1/payment/notify"
 
-	jumpURL, err := services.GetPaymentJumpURL(order.ID, req.PaymentMethodUUID, notifyBaseURL, req.ReturnURL)
+	jumpURL, err := services.GetPaymentJumpURL(order.ID, req.PaymentMethodUUID, req.PaymentChannel, notifyBaseURL, req.ReturnURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return

@@ -62,11 +62,13 @@ func (d *EpayDriver) Pay(orderID string, amount float64, notifyURL string, retur
 		"money":        fmt.Sprintf("%.2f", amount),
 	}
 
-	if val, ok := params["type"].(string); ok {
-		data["type"] = val
-	}
-	if val, ok := params["name"].(string); ok {
-		data["name"] = val
+	if params != nil {
+		if val, ok := params["type"].(string); ok && val != "" {
+			data["type"] = val
+		}
+		if val, ok := params["name"].(string); ok && val != "" {
+			data["name"] = val
+		}
 	}
 
 	sign := d.generateSign(data)
