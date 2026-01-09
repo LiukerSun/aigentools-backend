@@ -70,12 +70,14 @@ func DeductBalanceTx(tx *gorm.DB, userID uint, amount float64, reason string, me
 
 	balanceBefore := user.Balance
 	balanceAfter := balanceBefore - amount
+	totalConsumed := user.TotalConsumed + amount
 
 	// Update user balance and version
 	currentVersion := user.Version
 	updates := map[string]interface{}{
-		"balance": balanceAfter,
-		"version": currentVersion + 1,
+		"balance":        balanceAfter,
+		"total_consumed": totalConsumed,
+		"version":        currentVersion + 1,
 	}
 
 	// Apply updates with optimistic lock
@@ -117,6 +119,7 @@ func DeductBalanceTx(tx *gorm.DB, userID uint, amount float64, reason string, me
 	// Return updated user object (reload to get latest state if needed, but we have values)
 	// For consistency, let's update the user struct we have
 	user.Balance = balanceAfter
+	user.TotalConsumed = totalConsumed
 	user.Version++
 	return &user, nil
 }
@@ -303,6 +306,17 @@ func AdjustBalance(userID uint, amount float64, reason string, meta TransactionM
 		"version": currentVersion + 1,
 	}
 
+	// Update TotalConsumed if this is a refund (amount > 0 and type is refund)
+	// Or if it's a manual deduction (amount < 0)
+	if meta.Type == models.TransactionTypeUserRefund {
+		// Refund reduces total consumed
+		updates["total_consumed"] = user.TotalConsumed - amount
+	} else if amount < 0 {
+		// Manual deduction (admin) increases total consumed?
+		// Assuming admin debit counts as consumption.
+		updates["total_consumed"] = user.TotalConsumed + (-amount)
+	}
+
 	// Status management logic
 	if balanceAfter == 0 {
 		updates["is_active"] = false
@@ -414,4 +428,3 @@ func DeleteUser(id uint) error {
 
 	return nil
 }
-

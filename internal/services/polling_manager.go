@@ -13,6 +13,7 @@ import (
 type PollingManager struct {
 	mu         sync.RWMutex
 	tasks      map[uint]*PollingTask
+	processing sync.Map
 	addChan    chan uint
 	removeChan chan uint
 	stopChan   chan struct{}
@@ -155,6 +156,19 @@ func (pm *PollingManager) pollTask(pt *PollingTask) {
 			// Mark as failed in DB
 			task.Status = models.TaskStatusFailed
 			task.ErrorLog = fmt.Sprintf("Polling failed after retries: %v", err)
+
+			// Refund if cost > 0
+			if task.Cost > 0 {
+				_, refundErr := AdjustBalance(task.CreatorID, task.Cost, fmt.Sprintf("Refund for task %d failure", task.ID), TransactionMetadata{
+					Operator: "system",
+					Type:     models.TransactionTypeUserRefund,
+				})
+				if refundErr != nil {
+					fmt.Printf("Refund failed for task %d: %v\n", task.ID, refundErr)
+					task.ErrorLog += fmt.Sprintf("; Refund failed: %v", refundErr)
+				}
+			}
+
 			database.DB.Save(&task)
 			pm.Remove(pt.ID)
 		}

@@ -15,4 +15,5 @@ type User struct {
 	DeactivatedAt *time.Time `json:"deactivated_at,omitempty"`
 	Balance       float64    `gorm:"default:0;type:decimal(20,8)"`
 	CreditLimit   float64    `gorm:"default:0;type:decimal(20,8)"`
+	TotalConsumed float64    `gorm:"default:0;type:decimal(20,8)"`
 }

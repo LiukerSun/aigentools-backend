@@ -48,6 +48,22 @@ func CreateTask(inputData map[string]interface{}, creatorID uint, creatorName st
 		modelID = extractID("modelId")
 	}
 
+	// Try to find by model_url if model_id is missing
+	if modelID == 0 {
+		if modelData, ok := inputData["model"].(map[string]interface{}); ok {
+			if url, ok := modelData["model_url"].(string); ok && url != "" {
+				var am models.AIModel
+				if err := database.DB.Where("url = ?", url).First(&am).Error; err == nil {
+					modelID = am.ID
+				}
+			}
+		}
+	}
+
+	if modelID == 0 {
+		return nil, errors.New("model_id is required")
+	}
+
 	// 2. Start Transaction
 	tx := database.DB.Begin()
 	defer func() {
@@ -96,6 +112,7 @@ func CreateTask(inputData map[string]interface{}, creatorID uint, creatorName st
 		CreatorName: creatorName,
 		Status:      models.TaskStatusPendingAudit,
 		MaxRetries:  3,
+		Cost:        price,
 	}
 
 	if cfg.AutoAudit {
@@ -109,6 +126,12 @@ func CreateTask(inputData map[string]interface{}, creatorID uint, creatorName st
 
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
+	}
+
+	// Invalidate user cache to ensure balance is updated
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("user:%d", creatorID)
+		database.RedisClient.Del(database.Ctx, cacheKey)
 	}
 
 	if cfg.AutoAudit {
@@ -427,6 +450,19 @@ func handleFailure(task *models.Task, err error) {
 	} else {
 		task.Status = models.TaskStatusFailed
 		fmt.Printf("Task %d failed permanently after %d retries\n", task.ID, task.MaxRetries)
+
+		// Refund if cost > 0
+		if task.Cost > 0 {
+			_, refundErr := AdjustBalance(task.CreatorID, task.Cost, fmt.Sprintf("Refund for task %d failure", task.ID), TransactionMetadata{
+				Operator: "system",
+				Type:     models.TransactionTypeUserRefund,
+			})
+			if refundErr != nil {
+				fmt.Printf("Refund failed for task %d: %v\n", task.ID, refundErr)
+				task.ErrorLog += fmt.Sprintf("; Refund failed: %v", refundErr)
+			}
+		}
+
 		database.DB.Save(task)
 	}
 }

@@ -55,8 +55,9 @@ func TestCurrentUser(t *testing.T) {
 				Username:    "credituser",
 				Role:        "user",
 				IsActive:    true,
-				Balance:     1000.0,
-				CreditLimit: 5000.0,
+				Balance:       1000.0,
+				CreditLimit:   5000.0,
+				TotalConsumed: 50.0,
 			},
 			expectedStatus: http.StatusOK,
 			checkResponse: func(t *testing.T, body []byte) {
@@ -73,6 +74,7 @@ func TestCurrentUser(t *testing.T) {
 				assert.Equal(t, 6000.0, resp.Data.Credit.Available)
 				assert.Equal(t, 0.0, resp.Data.Credit.Used)
 				assert.Equal(t, 0.0, resp.Data.Credit.UsagePercentage)
+				assert.Equal(t, 50.0, resp.Data.TotalConsumed)
 			},
 		},
 		{

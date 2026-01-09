@@ -33,6 +33,7 @@ type Task struct {
 	MaxRetries   int            `json:"max_retries" gorm:"default:3"`
 	ErrorLog     string         `json:"error_log"`
 	RemoteTaskID string         `json:"remote_task_id"`
+	Cost         float64        `json:"cost"`
 }
 
 // TableName overrides the table name

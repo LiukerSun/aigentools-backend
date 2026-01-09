@@ -1,6 +1,7 @@
 package user
 
 import (
+	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
 	"aigentools-backend/internal/utils"
 	"net/http"
@@ -26,6 +27,13 @@ func CurrentUser(c *gin.Context) {
 	}
 
 	u := user.(models.User)
+
+	// Force reload user from DB to ensure we have the latest balance/stats
+	// ignoring the cached version from middleware
+	var latestUser models.User
+	if err := database.DB.First(&latestUser, u.ID).Error; err == nil {
+		u = latestUser
+	}
 
 	token, err := utils.GenerateToken(u.ID, u.Role)
 	if err != nil {
@@ -72,6 +80,7 @@ func CurrentUser(c *gin.Context) {
 		ActivatedAt:   u.ActivatedAt,
 		DeactivatedAt: u.DeactivatedAt,
 		CreditLimit:   u.CreditLimit,
+		TotalConsumed: u.TotalConsumed,
 		Credit:        creditInfo,
 		Token:         token,
 	}))

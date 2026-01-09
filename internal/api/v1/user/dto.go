@@ -11,6 +11,7 @@ type UserResponse struct {
 	ActivatedAt   *time.Time  `json:"activated_at,omitempty"`
 	DeactivatedAt *time.Time  `json:"deactivated_at,omitempty"`
 	CreditLimit   float64     `json:"creditLimit"`
+	TotalConsumed float64     `json:"total_consumed"`
 	Credit        *CreditInfo `json:"credit,omitempty"`
 	Token         string      `json:"token,omitempty"`
 }

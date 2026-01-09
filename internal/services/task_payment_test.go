@@ -3,6 +3,7 @@ package services
 import (
 	"aigentools-backend/internal/database"
 	"aigentools-backend/internal/models"
+	"errors"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -68,6 +69,7 @@ func TestCreateTask_Payment(t *testing.T) {
 	task, err := CreateTask(inputData, user.ID, user.Username)
 	assert.NoError(t, err)
 	assert.NotNil(t, task)
+	assert.Equal(t, 10.0, task.Cost)
 
 	// Verify Deduction
 	var updatedUser models.User
@@ -112,4 +114,96 @@ func TestCreateTask_Payment(t *testing.T) {
 
 	database.DB.First(&updatedUser, user.ID)
 	assert.Equal(t, -45.0, updatedUser.Balance) // Unchanged
+
+	// Case 4: Missing Model ID
+	inputDataMissingID := map[string]interface{}{
+		"prompt": "test",
+	}
+	task4, err := CreateTask(inputDataMissingID, user.ID, user.Username)
+	assert.Error(t, err)
+	assert.Nil(t, task4)
+	assert.Contains(t, err.Error(), "model_id is required")
+
+	// Case 5: Missing Model ID but Valid Model URL
+	// Set valid URL for the model
+	model.URL = "http://example.com/model"
+	database.DB.Save(&model)
+
+	// Reset user balance to positive
+	database.DB.Model(&updatedUser).Where("id = ?", user.ID).Updates(map[string]interface{}{
+		"balance": 100.0,
+		"version": updatedUser.Version + 1,
+	})
+
+	inputDataURL := map[string]interface{}{
+		"prompt": "test",
+		"model": map[string]interface{}{
+			"model_url": "http://example.com/model",
+		},
+	}
+	task5, err := CreateTask(inputDataURL, user.ID, user.Username)
+	assert.NoError(t, err)
+	assert.NotNil(t, task5)
+	assert.Equal(t, 10.0, task5.Cost)
+
+	// Verify Deduction
+	database.DB.First(&updatedUser, user.ID)
+	assert.Equal(t, 90.0, updatedUser.Balance)
+	assert.Equal(t, 30.0, updatedUser.TotalConsumed)
+}
+
+func TestTask_FailureRefund(t *testing.T) {
+	setupPaymentTestDB()
+	mr := setupPaymentTestRedis()
+	defer mr.Close()
+
+	// Seed Model
+	model := models.AIModel{
+		Name:   "Refund Test Model",
+		Price:  10.0,
+		Status: models.AIModelStatusOpen,
+	}
+	database.DB.Create(&model)
+
+	// Seed User
+	user := models.User{
+		Username: "refund_user",
+		Balance:  100.0,
+		Version:  1,
+		IsActive: true,
+	}
+	database.DB.Create(&user)
+
+	// 1. Create Task
+	inputData := map[string]interface{}{
+		"model_id": float64(model.ID),
+		"prompt":   "test",
+	}
+
+	task, err := CreateTask(inputData, user.ID, user.Username)
+	assert.NoError(t, err)
+
+	// 2. Verify Deduction
+	var updatedUser models.User
+	database.DB.First(&updatedUser, user.ID)
+	assert.Equal(t, 90.0, updatedUser.Balance)
+
+	// 3. Simulate Failure
+	// We need to import errors to use errors.New
+	// But errors is standard lib.
+	// Since we are in same package, we can call handleFailure.
+	// But we need to make sure we set max retries.
+	task.RetryCount = task.MaxRetries
+	handleFailure(task, errors.New("simulated fatal error"))
+
+	// 4. Verify Refund
+	database.DB.First(&updatedUser, user.ID)
+	assert.Equal(t, 100.0, updatedUser.Balance)
+
+	// Verify Refund Transaction
+	var trans models.Transaction
+	database.DB.Where("type = ?", models.TransactionTypeUserRefund).Last(&trans)
+	assert.Equal(t, 10.0, trans.Amount)
+	assert.Equal(t, user.ID, trans.UserID)
+	assert.Contains(t, trans.Reason, "Refund")
 }
