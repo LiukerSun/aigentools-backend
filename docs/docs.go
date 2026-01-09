@@ -533,6 +533,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/ai-assistant/analyze": {
+            "post": {
+                "description": "Use AI to analyze an image and generate prompts based on a selected template",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ai_assistant"
+                ],
+                "summary": "Analyze image and generate prompts",
+                "parameters": [
+                    {
+                        "description": "Analysis Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ai_assistant.AnalyzeImageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/ai_assistant.AnalyzeImageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Log in a user with a username and password",
@@ -1511,6 +1569,33 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "ai_assistant.AnalyzeImageRequest": {
+            "type": "object",
+            "required": [
+                "imageUrl",
+                "template"
+            ],
+            "properties": {
+                "imageUrl": {
+                    "type": "string"
+                },
+                "template": {
+                    "type": "string",
+                    "enum": [
+                        "nsfw",
+                        "ecommerce"
+                    ]
+                }
+            }
+        },
+        "ai_assistant.AnalyzeImageResponse": {
+            "type": "object",
+            "properties": {
+                "result": {
+                    "type": "string"
+                }
+            }
+        },
         "ai_model.AIModelListItem": {
             "type": "object",
             "properties": {

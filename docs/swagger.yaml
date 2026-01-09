@@ -1,5 +1,23 @@
 basePath: /api/v1
 definitions:
+  ai_assistant.AnalyzeImageRequest:
+    properties:
+      imageUrl:
+        type: string
+      template:
+        enum:
+        - nsfw
+        - ecommerce
+        type: string
+    required:
+    - imageUrl
+    - template
+    type: object
+  ai_assistant.AnalyzeImageResponse:
+    properties:
+      result:
+        type: string
+    type: object
   ai_model.AIModelListItem:
     properties:
       created_at:
@@ -726,6 +744,42 @@ paths:
       summary: Adjust user balance (Credit/Debit)
       tags:
       - admin
+  /ai-assistant/analyze:
+    post:
+      consumes:
+      - application/json
+      description: Use AI to analyze an image and generate prompts based on a selected
+        template
+      parameters:
+      - description: Analysis Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ai_assistant.AnalyzeImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/ai_assistant.AnalyzeImageResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.Response'
+      summary: Analyze image and generate prompts
+      tags:
+      - ai_assistant
   /auth/login:
     post:
       consumes:

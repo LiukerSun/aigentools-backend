@@ -5,6 +5,7 @@ import (
 	_ "aigentools-backend/docs"
 	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
+	aiAssistant "aigentools-backend/internal/api/v1/ai_assistant"
 	aiModel "aigentools-backend/internal/api/v1/ai_model"
 	"aigentools-backend/internal/api/v1/auth"
 	"aigentools-backend/internal/api/v1/common/upload"
@@ -81,6 +82,7 @@ func NewRouter() (*gin.Engine, error) {
 		authorized.Use(middleware.AuthMiddleware())
 		{
 			userRoutes.RegisterRoutes(authorized)
+			aiAssistant.RegisterRoutes(authorized)
 		}
 
 		// Admin routes

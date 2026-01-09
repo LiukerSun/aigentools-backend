@@ -38,6 +38,9 @@ type Config struct {
 	// Jiekou API Configuration
 	JIEKOU_API string
 
+	// AIHubMix API Configuration
+	AIHubMixAPIKey string
+
 	// Task Configuration
 	AutoAudit bool
 }
@@ -85,7 +88,8 @@ func LoadConfig() (*Config, error) {
 		LogMaxAge:     getEnvAsInt("LOG_MAX_AGE", 28),
 		LogCompress:   getEnvAsBool("LOG_COMPRESS", true),
 
-		JIEKOU_API: getEnv("JIEKOU_API", ""),
+		JIEKOU_API:     getEnv("JIEKOU_API", ""),
+		AIHubMixAPIKey: getEnv("AIHUBMIX_API_KEY", ""),
 
 		AutoAudit: getEnvAsBool("AUTO_AUDIT", false),
 	}, nil
