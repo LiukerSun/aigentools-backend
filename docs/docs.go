@@ -1920,6 +1920,9 @@ const docTemplate = `{
         "models.Task": {
             "type": "object",
             "properties": {
+                "cost": {
+                    "type": "number"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2314,6 +2317,9 @@ const docTemplate = `{
                 },
                 "token": {
                     "type": "string"
+                },
+                "total_consumed": {
+                    "type": "number"
                 },
                 "username": {
                     "type": "string"

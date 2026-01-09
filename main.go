@@ -43,7 +43,14 @@ func main() {
 	defer logger.Sync()
 
 	// Migrate the schema
-	err = database.DB.AutoMigrate(&models.User{}, &models.Transaction{}, &models.AIModel{}, &models.Task{})
+	err = database.DB.AutoMigrate(
+		&models.User{},
+		&models.Transaction{},
+		&models.AIModel{},
+		&models.Task{},
+		&models.PaymentConfig{},
+		&models.PaymentOrderRecord{},
+	)
 	if err != nil {
 		logger.Log.Fatal("failed to migrate database", zap.Error(err))
 	}

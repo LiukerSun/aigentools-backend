@@ -1914,6 +1914,9 @@
         "models.Task": {
             "type": "object",
             "properties": {
+                "cost": {
+                    "type": "number"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2308,6 +2311,9 @@
                 },
                 "token": {
                     "type": "string"
+                },
+                "total_consumed": {
+                    "type": "number"
                 },
                 "username": {
                     "type": "string"

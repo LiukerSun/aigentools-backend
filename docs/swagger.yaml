@@ -161,6 +161,8 @@ definitions:
     type: object
   models.Task:
     properties:
+      cost:
+        type: number
       created_at:
         type: string
       creator_id:
@@ -429,6 +431,8 @@ definitions:
         type: string
       token:
         type: string
+      total_consumed:
+        type: number
       username:
         type: string
     type: object

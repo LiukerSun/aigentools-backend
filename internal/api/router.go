@@ -4,12 +4,14 @@ import (
 	"aigentools-backend/config"
 	_ "aigentools-backend/docs"
 	"aigentools-backend/internal/api/test"
+	adminPayment "aigentools-backend/internal/api/v1/admin/payment"
 	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
 	aiAssistant "aigentools-backend/internal/api/v1/ai_assistant"
 	aiModel "aigentools-backend/internal/api/v1/ai_model"
 	"aigentools-backend/internal/api/v1/auth"
 	"aigentools-backend/internal/api/v1/common/upload"
+	"aigentools-backend/internal/api/v1/payment"
 	"aigentools-backend/internal/api/v1/task"
 	userRoutes "aigentools-backend/internal/api/v1/user"
 	"aigentools-backend/internal/database"
@@ -81,6 +83,7 @@ func NewRouter() (*gin.Engine, error) {
 		aiModel.RegisterRoutes(v1)
 		upload.RegisterRoutes(v1)
 		task.RegisterRoutes(v1)
+		payment.RegisterRoutes(v1)
 
 		authorized := v1.Group("/")
 		authorized.Use(middleware.AuthMiddleware())
@@ -95,6 +98,7 @@ func NewRouter() (*gin.Engine, error) {
 		{
 			adminUser.RegisterRoutes(admin)
 			adminTransaction.RegisterRoutes(admin)
+			adminPayment.RegisterRoutes(admin)
 		}
 	}
 
