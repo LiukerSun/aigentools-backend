@@ -396,6 +396,7 @@ func UpdateModel(c *gin.Context) {
 		Description: model.Description,
 		Status:      model.Status,
 		URL:         model.URL,
+		Price:       model.Price,
 		Parameters:  model.Parameters,
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,

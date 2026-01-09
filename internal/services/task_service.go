@@ -21,8 +21,72 @@ const TaskQueueKey = "task_queue"
 func CreateTask(inputData map[string]interface{}, creatorID uint, creatorName string) (*models.Task, error) {
 	cfg, _ := config.LoadConfig()
 
+	// 1. Check Model and Price
+	var price float64
+	var modelID uint
+	var modelName string
+
+	// Helper to extract ID
+	extractID := func(key string) uint {
+		if val, ok := inputData[key]; ok {
+			switch v := val.(type) {
+			case float64:
+				return uint(v)
+			case int:
+				return uint(v)
+			case string:
+				if id, err := strconv.Atoi(v); err == nil {
+					return uint(id)
+				}
+			}
+		}
+		return 0
+	}
+
+	modelID = extractID("model_id")
+	if modelID == 0 {
+		modelID = extractID("modelId")
+	}
+
+	// 2. Start Transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if modelID > 0 {
+		// We need to call GetAIModelByID but inside the transaction to be safe?
+		// Actually GetAIModelByID uses database.DB. We can use it, but if we want to be part of transaction
+		// we should probably query using tx. But GetAIModelByID is a read operation, it's fine to be outside or independent.
+		// However, to ensure consistency (e.g. price doesn't change), maybe we should query inside.
+		// But for now, using the service function is fine.
+		model, err := GetAIModelByID(modelID)
+		if err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("invalid model_id: %v", err)
+		}
+		price = model.Price
+		modelName = model.Name
+	}
+
+	// 3. Deduct Balance
+	if price > 0 {
+		_, err := DeductBalanceTx(tx, creatorID, price, fmt.Sprintf("Create task for model: %s", modelName), TransactionMetadata{
+			Operator:   "system",
+			OperatorID: 0,
+			Type:       models.TransactionTypeUserConsume,
+		})
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
 	inputJSON, err := json.Marshal(inputData)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -38,7 +102,12 @@ func CreateTask(inputData map[string]interface{}, creatorID uint, creatorName st
 		task.Status = models.TaskStatusPendingExecution
 	}
 
-	if err := database.DB.Create(&task).Error; err != nil {
+	if err := tx.Create(&task).Error; err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
 

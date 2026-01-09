@@ -1667,6 +1667,9 @@
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "status": {
                     "$ref": "#/definitions/models.AIModelStatus"
                 },
@@ -1740,6 +1743,9 @@
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "status": {
                     "enum": [
                         "open",
@@ -1768,6 +1774,9 @@
                 },
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
+                },
+                "price": {
+                    "type": "number"
                 },
                 "status": {
                     "enum": [

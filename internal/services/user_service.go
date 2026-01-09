@@ -21,10 +21,6 @@ var ErrInsufficientBalance = errors.New("insufficient balance")
 
 // DeductBalance decreases user's balance and checks for sufficient funds.
 func DeductBalance(userID uint, amount float64, reason string, meta TransactionMetadata) (*models.User, error) {
-	if amount <= 0 {
-		return nil, errors.New("amount must be positive")
-	}
-
 	tx := database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -32,9 +28,34 @@ func DeductBalance(userID uint, amount float64, reason string, meta TransactionM
 		}
 	}()
 
+	user, err := DeductBalanceTx(tx, userID, amount, reason, meta)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Commit
+	if err := tx.Commit().Error; err != nil {
+		return nil, err
+	}
+
+	// Invalidate cache
+	if database.RedisClient != nil {
+		cacheKey := fmt.Sprintf("user:%d", userID)
+		database.RedisClient.Del(database.Ctx, cacheKey)
+	}
+
+	return user, nil
+}
+
+// DeductBalanceTx executes the deduction logic within a provided transaction.
+func DeductBalanceTx(tx *gorm.DB, userID uint, amount float64, reason string, meta TransactionMetadata) (*models.User, error) {
+	if amount <= 0 {
+		return nil, errors.New("amount must be positive")
+	}
+
 	var user models.User
 	if err := tx.First(&user, userID).Error; err != nil {
-		tx.Rollback()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
 		}
@@ -44,7 +65,6 @@ func DeductBalance(userID uint, amount float64, reason string, meta TransactionM
 	// Calculate available balance (Balance + CreditLimit)
 	availableBalance := user.Balance + user.CreditLimit
 	if availableBalance < amount {
-		tx.Rollback()
 		return nil, ErrInsufficientBalance
 	}
 
@@ -58,26 +78,12 @@ func DeductBalance(userID uint, amount float64, reason string, meta TransactionM
 		"version": currentVersion + 1,
 	}
 
-	// Status management logic (optional: deactivate if balance goes to 0 or negative beyond limit? 
-	// But DeductBalance usually implies consumption. If balanceAfter becomes 0, maybe deactivate?)
-	if balanceAfter == 0 && user.CreditLimit == 0 {
-		// Only deactivate if no credit limit? Or strictly if balance is 0?
-		// Keeping consistent with AdjustBalance logic for now.
-		// Requirement: "验证边界条件（如扣减后余额为0的情况）"
-	}
-	// Let's stick to AdjustBalance logic: if balanceAfter == 0, deactivate?
-	// But if CreditLimit > 0, balanceAfter could be negative.
-	// The requirement doesn't explicitly say auto-deactivate on deduct, but implies "check sufficient funds".
-	// If funds sufficient, we proceed.
-
 	// Apply updates with optimistic lock
 	result := tx.Model(&user).Where("version = ?", currentVersion).Updates(updates)
 	if result.Error != nil {
-		tx.Rollback()
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
-		tx.Rollback()
 		return nil, ErrOptimisticLock
 	}
 
@@ -105,24 +111,13 @@ func DeductBalance(userID uint, amount float64, reason string, meta TransactionM
 	transaction.Hash = transaction.GenerateHash(secret)
 
 	if err := tx.Create(&transaction).Error; err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	// Commit
-	if err := tx.Commit().Error; err != nil {
-		return nil, err
-	}
-
-	// Invalidate cache
-	if database.RedisClient != nil {
-		cacheKey := fmt.Sprintf("user:%d", userID)
-		database.RedisClient.Del(database.Ctx, cacheKey)
-	}
-
-	// Fetch updated user
-	database.DB.First(&user, userID)
-
+	// Return updated user object (reload to get latest state if needed, but we have values)
+	// For consistency, let's update the user struct we have
+	user.Balance = balanceAfter
+	user.Version++
 	return &user, nil
 }
 

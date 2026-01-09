@@ -1673,6 +1673,9 @@ const docTemplate = `{
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "status": {
                     "$ref": "#/definitions/models.AIModelStatus"
                 },
@@ -1746,6 +1749,9 @@ const docTemplate = `{
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "status": {
                     "enum": [
                         "open",
@@ -1774,6 +1780,9 @@ const docTemplate = `{
                 },
                 "parameters": {
                     "$ref": "#/definitions/models.JSON"
+                },
+                "price": {
+                    "type": "number"
                 },
                 "status": {
                     "enum": [
