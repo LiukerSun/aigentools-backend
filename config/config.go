@@ -35,6 +35,9 @@ type Config struct {
 	LogMaxAge     int
 	LogCompress   bool
 
+	// Jiekou API Configuration
+	JIEKOU_API string
+
 	// Task Configuration
 	AutoAudit bool
 }
@@ -81,6 +84,8 @@ func LoadConfig() (*Config, error) {
 		LogMaxBackups: getEnvAsInt("LOG_MAX_BACKUPS", 3),
 		LogMaxAge:     getEnvAsInt("LOG_MAX_AGE", 28),
 		LogCompress:   getEnvAsBool("LOG_COMPRESS", true),
+
+		JIEKOU_API: getEnv("JIEKOU_API", ""),
 
 		AutoAudit: getEnvAsBool("AUTO_AUDIT", false),
 	}, nil
