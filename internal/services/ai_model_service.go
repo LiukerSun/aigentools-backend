@@ -91,7 +91,7 @@ func GetAllModelsSimple() ([]models.AIModel, error) {
 	var modelsList []models.AIModel
 	// Select all columns except parameters
 	// Explicitly selecting columns is better than trying to omit
-	if err := database.DB.Select("id, name, description, status, url, created_at, updated_at").Find(&modelsList).Error; err != nil {
+	if err := database.DB.Select("id, name, description, status, url, created_at, updated_at").Where("status = ?", models.AIModelStatusOpen).Find(&modelsList).Error; err != nil {
 		return nil, err
 	}
 	return modelsList, nil

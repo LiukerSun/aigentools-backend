@@ -114,7 +114,23 @@ func UpdateTask(c *gin.Context) {
 func ListTasks(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	creatorID, _ := strconv.Atoi(c.Query("creator_id"))
+	
+	userVal, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, utils.NewErrorResponse(http.StatusUnauthorized, "User not authenticated"))
+		return
+	}
+	user := userVal.(models.User)
+
+	var creatorID uint
+	if user.Role == "admin" {
+		// Admin can see all tasks or filter by creator_id
+		cid, _ := strconv.Atoi(c.Query("creator_id"))
+		creatorID = uint(cid)
+	} else {
+		// Regular user can only see their own tasks
+		creatorID = user.ID
+	}
 	
 	var status *models.TaskStatus
 	if statusStr := c.Query("status"); statusStr != "" {
@@ -125,7 +141,7 @@ func ListTasks(c *gin.Context) {
 		}
 	}
 
-	tasks, total, err := services.GetTasks(page, pageSize, uint(creatorID), status)
+	tasks, total, err := services.GetTasks(page, pageSize, creatorID, status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, utils.NewErrorResponse(http.StatusInternalServerError, err.Error()))
 		return
