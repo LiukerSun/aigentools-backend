@@ -2,12 +2,15 @@ package ai_assistant
 
 import (
 	"aigentools-backend/config"
+	"aigentools-backend/internal/models"
+	"aigentools-backend/internal/services"
 	"aigentools-backend/internal/utils"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -90,9 +93,34 @@ func AnalyzeImage(c *gin.Context) {
 		systemPrompt = SystemPromptNSFW
 	case "ecommerce":
 		systemPrompt = SystemPromptEcommerce
+	case "custom":
+		// Custom template logic: Prompt field contains the raw System Prompt content
+		if req.Prompt == "" {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Prompt field is required when template is 'custom'"))
+			return
+		}
+		systemPrompt = req.Prompt
 	default:
-		c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, "Invalid template"))
-		return
+		// Fallback for direct ID in Template field (legacy/alternate support)
+		templateID, err := strconv.ParseUint(req.Template, 10, 32)
+		if err == nil {
+			// Get current user ID if available
+			var userID uint
+			if userVal, exists := c.Get("user"); exists {
+				user := userVal.(models.User)
+				userID = user.ID
+			}
+
+			template, err := services.GetPromptTemplate(uint(templateID), userID)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("Template ID %d not found or access denied", templateID)))
+				return
+			}
+			systemPrompt = template.Content
+		} else {
+			c.JSON(http.StatusBadRequest, utils.NewErrorResponse(http.StatusBadRequest, fmt.Sprintf("Template '%s' not recognized. Supported: nsfw, ecommerce, custom (with prompt ID)", req.Template)))
+			return
+		}
 	}
 
 	// Construct request to external AI service

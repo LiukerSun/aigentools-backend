@@ -50,6 +50,8 @@ func main() {
 		&models.Task{},
 		&models.PaymentConfig{},
 		&models.PaymentOrderRecord{},
+		&models.Prompt{},
+		&models.PromptTemplate{},
 	)
 	if err != nil {
 		logger.Log.Fatal("failed to migrate database", zap.Error(err))
