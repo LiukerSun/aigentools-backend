@@ -1,0 +1,792 @@
+{
+  "info": {
+    "_postman_id": "aigentools-backend-api",
+    "name": "Aigentools Backend API",
+    "description": "AI 服务平台后端 API 接口集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth - 认证",
+      "item": [
+        {
+          "name": "注册用户",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "注册新用户，首个注册用户自动成为管理员"
+          },
+          "response": []
+        },
+        {
+          "name": "用户登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "用户登录，返回 JWT Token"
+          },
+          "response": []
+        },
+        {
+          "name": "用户登出",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "登出并使 Token 失效"
+          },
+          "response": []
+        },
+        {
+          "name": "获取当前用户信息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "user"]
+            },
+            "description": "获取当前登录用户的详细信息，包括余额和信用额度"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Models - AI模型",
+      "item": [
+        {
+          "name": "获取模型列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/models?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["models"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "name",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "open",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "获取分页模型列表，支持按名称和状态过滤"
+          },
+          "response": []
+        },
+        {
+          "name": "获取模型名称列表（简化版）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/models/names",
+              "host": ["{{baseUrl}}"],
+              "path": ["models", "names"]
+            },
+            "description": "获取所有模型的简化信息列表"
+          },
+          "response": []
+        },
+        {
+          "name": "获取模型参数",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/models/1/parameters",
+              "host": ["{{baseUrl}}"],
+              "path": ["models", "1", "parameters"]
+            },
+            "description": "获取指定模型的参数配置"
+          },
+          "response": []
+        },
+        {
+          "name": "创建模型 (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Model\",\n  \"description\": \"Model description\",\n  \"status\": \"draft\",\n  \"url\": \"https://api.example.com/v1\",\n  \"price\": 0.01,\n  \"parameters\": {\n    \"request_header\": [],\n    \"request_body\": [],\n    \"response_parameters\": []\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/models/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["models", "create"]
+            },
+            "description": "创建新的 AI 模型（仅管理员）"
+          },
+          "response": []
+        },
+        {
+          "name": "更新模型 (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Model Name\",\n  \"description\": \"Updated description\",\n  \"status\": \"open\",\n  \"price\": 0.02\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/models/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["models", "1"]
+            },
+            "description": "更新模型信息（仅管理员）"
+          },
+          "response": []
+        },
+        {
+          "name": "更新模型状态 (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"open\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/models/1/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["models", "1", "status"]
+            },
+            "description": "更新模型状态：open/closed/draft（仅管理员）"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tasks - 任务",
+      "item": [
+        {
+          "name": "提交任务",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": {\n    \"model_id\": 1,\n    \"prompt\": \"test prompt\"\n  },\n  \"user\": {\n    \"creatorId\": 1,\n    \"creatorName\": \"testuser\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"]
+            },
+            "description": "提交新任务"
+          },
+          "response": []
+        },
+        {
+          "name": "获取任务列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks?page=1&page_size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "creator_id",
+                  "value": "1",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "获取任务列表，普通用户只能看到自己的任务"
+          },
+          "response": []
+        },
+        {
+          "name": "获取任务详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "1"]
+            },
+            "description": "获取单个任务的详细信息"
+          },
+          "response": []
+        },
+        {
+          "name": "审批任务",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/1/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "1", "approve"]
+            },
+            "description": "审批通过任务，将其推入执行队列"
+          },
+          "response": []
+        },
+        {
+          "name": "更新任务",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": {\n    \"model_id\": 1,\n    \"prompt\": \"updated prompt\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tasks/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "1"]
+            },
+            "description": "更新任务参数（仅限未处理的任务）"
+          },
+          "response": []
+        },
+        {
+          "name": "重试任务",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/1/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "1", "retry"]
+            },
+            "description": "重试失败的任务"
+          },
+          "response": []
+        },
+        {
+          "name": "取消任务",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["tasks", "1", "cancel"]
+            },
+            "description": "取消待处理的任务"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment - 支付",
+      "item": [
+        {
+          "name": "获取支付方式",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment/methods",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "methods"]
+            },
+            "description": "获取可用的支付方式列表"
+          },
+          "response": []
+        },
+        {
+          "name": "创建支付订单",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 100.00,\n  \"payment_method_uuid\": \"your-payment-method-uuid\",\n  \"payment_channel\": \"alipay\",\n  \"return_url\": \"https://your-site.com/payment/callback\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/payment/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment", "create"]
+            },
+            "description": "创建支付订单，返回跳转 URL"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload - 文件上传",
+      "item": [
+        {
+          "name": "获取 OSS 上传凭证",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/common/upload/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["common", "upload", "token"]
+            },
+            "description": "获取阿里云 OSS STS 临时凭证用于前端直传"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AI Assistant - AI助手",
+      "item": [
+        {
+          "name": "分析图片生成提示词",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://example.com/image.jpg\",\n  \"template\": \"ecommerce\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai-assistant/analyze",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai-assistant", "analyze"]
+            },
+            "description": "分析图片并生成 AI 提示词，template 可选: nsfw, ecommerce"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin - 管理员",
+      "item": [
+        {
+          "name": "Users - 用户管理",
+          "item": [
+            {
+              "name": "获取用户列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "is_active",
+                      "value": "true",
+                      "disabled": true
+                    },
+                    {
+                      "key": "created_after",
+                      "value": "2024-01-01T00:00:00Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "created_before",
+                      "value": "2024-12-31T23:59:59Z",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "获取用户列表（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "更新用户",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"newusername\",\n  \"role\": \"user\",\n  \"is_active\": true,\n  \"creditLimit\": 100.00\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", "1"]
+                },
+                "description": "更新用户信息（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "调整用户余额",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": 100.00,\n  \"type\": \"credit\",\n  \"reason\": \"管理员充值\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users/1/balance",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", "1", "balance"]
+                },
+                "description": "调整用户余额，type: credit(增加) / debit(扣减)"
+              },
+              "response": []
+            },
+            {
+              "name": "删除用户",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/users/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "users", "1"]
+                },
+                "description": "删除用户（仅管理员，不能删除自己）"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Transactions - 交易记录",
+          "item": [
+            {
+              "name": "获取交易列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/transactions?page=1&limit=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "transactions"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "user_id",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "type",
+                      "value": "admin_adjustment",
+                      "disabled": true
+                    },
+                    {
+                      "key": "start_time",
+                      "value": "2024-01-01T00:00:00Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "end_time",
+                      "value": "2024-12-31T23:59:59Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "min_amount",
+                      "value": "0",
+                      "disabled": true
+                    },
+                    {
+                      "key": "max_amount",
+                      "value": "1000",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "获取交易记录列表（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "导出交易记录 (CSV)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/transactions/export",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "transactions", "export"],
+                  "query": [
+                    {
+                      "key": "user_id",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "type",
+                      "value": "admin_adjustment",
+                      "disabled": true
+                    },
+                    {
+                      "key": "start_time",
+                      "value": "2024-01-01T00:00:00Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "end_time",
+                      "value": "2024-12-31T23:59:59Z",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "导出交易记录为 CSV 文件（仅管理员）"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Payment Config - 支付配置",
+          "item": [
+            {
+              "name": "获取支付配置列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payment/config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "payment", "config"]
+                },
+                "description": "获取所有支付配置（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "创建支付配置",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"易支付-支付宝\",\n  \"payment_method\": \"epay\",\n  \"config\": {\n    \"pid\": \"your_pid\",\n    \"key\": \"your_key\",\n    \"gateway\": \"https://pay.example.com/\"\n  },\n  \"enable\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payment/config",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "payment", "config"]
+                },
+                "description": "创建新的支付配置（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "更新支付配置",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"易支付-支付宝(已更新)\",\n  \"config\": {\n    \"pid\": \"new_pid\",\n    \"key\": \"new_key\",\n    \"gateway\": \"https://newpay.example.com/\"\n  },\n  \"enable\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payment/config/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "payment", "config", "1"]
+                },
+                "description": "更新支付配置（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "删除支付配置",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/payment/config/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "payment", "config", "1"]
+                },
+                "description": "删除支付配置（仅管理员）"
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
