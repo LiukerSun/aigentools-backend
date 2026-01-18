@@ -35,8 +35,15 @@ WORKDIR /app
 # Copy the binary from builder
 COPY --from=builder /app/main .
 
-# Create logs directory
-RUN mkdir -p logs
+# Copy .env.example as .env if .env doesn't exist (optional, usually handled by volume or env_file in compose)
+# COPY .env.example .env
+
+# Create logs directory and set permissions
+RUN mkdir -p logs && chmod 777 logs
+
+# Create a non-root user
+RUN adduser -D -g '' appuser
+USER appuser
 
 # Expose port
 EXPOSE 8080

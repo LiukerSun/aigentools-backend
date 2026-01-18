@@ -6,18 +6,38 @@ services:
     container_name: aigentools-backend
     ports:
       - "8080:8080"
-    # 加载 .env 文件中的变量
     env_file:
       - .env
     environment:
-      # Redis 依然使用容器内的别名
+      - DB_HOST=db
+      - DB_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      # 数据库配置将直接读取 .env 文件或宿主机环境变量
-      # 如果连接宿主机上的数据库，DB_HOST 请使用 host.docker.internal
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_started
+    networks:
+      - app-network
+    restart: always
+
+  db:
+    image: postgres:15-alpine
+    container_name: aigentools-db
+    environment:
+      - POSTGRES_USER=${DB_USER:-aitools}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-4Zxerft47TS8iwiW}
+      - POSTGRES_DB=${DB_NAME:-aigentools}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
     restart: always
@@ -25,6 +45,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: aigentools-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     networks:
       - app-network
     restart: always
@@ -32,3 +56,7 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
