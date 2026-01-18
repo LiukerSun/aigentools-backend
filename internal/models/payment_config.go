@@ -6,6 +6,19 @@ import (
 	"gorm.io/datatypes"
 )
 
+// 订单状态常量
+const (
+	OrderStatusPending   = "pending"
+	OrderStatusPaid      = "paid"
+	OrderStatusCancelled = "cancelled"
+)
+
+// 订单类型常量
+const (
+	OrderTypePayment = "payment" // 在线支付
+	OrderTypeManual  = "manual"  // 管理员手动创建
+)
+
 type PaymentConfig struct {
 	ID            uint           `gorm:"primarykey"`
 	UUID          string         `gorm:"uniqueIndex;type:varchar(36);not null"`
@@ -24,6 +37,13 @@ type PaymentOrderRecord struct {
 	Status      string  `gorm:"type:varchar(20);default:'pending'"` // pending, paid, cancelled
 	PaymentUUID string  `gorm:"type:varchar(36);index"`             // Which payment config was used
 	ExternalID  string  `gorm:"type:varchar(64);index"`             // Transaction ID from payment gateway
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+
+	// 新增字段
+	OrderType   string     `gorm:"type:varchar(20);default:'payment';index"` // payment, manual
+	Remark      string     `gorm:"type:varchar(500)"`                        // 订单备注
+	CompletedAt *time.Time `gorm:"index"`                                    // 完成时间
+	CompletedBy uint       `gorm:"index;default:0"`                          // 完成操作者ID（0表示系统）
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

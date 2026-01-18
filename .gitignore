@@ -4,4 +4,5 @@ logs/*
 pkg/logger/test.log
 aigentools-backend.exe
 aigentools-backend.exe
-.claude/settings.local.json
+.claude/*
+.cursor/*

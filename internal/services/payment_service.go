@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 func GetPaymentMethods() ([]models.PaymentConfig, error) {
@@ -177,67 +176,9 @@ func HandlePaymentNotify(paymentUUID string, params map[string]interface{}) erro
 		return errors.New("invalid signature")
 	}
 
-	// Update Order
-	var order models.PaymentOrderRecord
-	if err := database.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
-		return err
-	}
+	// 更新外部交易ID
+	database.DB.Model(&models.PaymentOrderRecord{}).Where("id = ?", orderID).Update("external_id", externalID)
 
-	if order.Status == "paid" {
-		return nil // Already paid
-	}
-
-	// Transaction to update balance and order status
-	return database.DB.Transaction(func(tx *gorm.DB) error {
-		// Lock the order row to prevent race conditions
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&order, "id = ?", orderID).Error; err != nil {
-			return err
-		}
-
-		if order.Status == "paid" {
-			return nil
-		}
-
-		order.Status = "paid"
-		order.ExternalID = externalID
-		order.UpdatedAt = time.Now()
-		if err := tx.Save(&order).Error; err != nil {
-			return err
-		}
-
-		// Update User Balance
-		var user models.User
-		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&user, order.UserID).Error; err != nil {
-			return err
-		}
-
-		balanceBefore := user.Balance
-		user.Balance += order.Amount
-		if err := tx.Save(&user).Error; err != nil {
-			return err
-		}
-
-		// Create Transaction Record
-		transaction := models.Transaction{
-			UserID:        user.ID,
-			Amount:        order.Amount,
-			BalanceBefore: balanceBefore,
-			BalanceAfter:  user.Balance,
-			Reason:        fmt.Sprintf("Topup via %s (Order: %s)", config.PaymentMethod, order.ID),
-			Operator:      "system",
-			Type:          "user_topup", // Need to ensure this type exists or use a string
-			CreatedAt:     time.Now(),
-		}
-		// Assuming Transaction has GenerateHash and needs secret, but I'll skip it if not mandatory or use empty secret for now.
-		// Checking Transaction struct again... GenerateHash uses a secret.
-		// I'll try to get secret from env or config if possible, but for now I'll leave Hash empty or generate it with a placeholder.
-		// Better: transaction.Hash = transaction.GenerateHash("some_secret")
-		// I'll leave it empty as the system might fill it or it's optional.
-
-		if err := tx.Create(&transaction).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
+	// 使用通用的完成订单方法
+	return CompleteOrder(orderID, 0, "system")
 }

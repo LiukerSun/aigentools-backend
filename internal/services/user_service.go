@@ -154,6 +154,8 @@ func FindUserByID(userID uint) (models.User, error) {
 
 // UserFilter defines criteria for filtering users
 type UserFilter struct {
+	Username      string
+	Role          string
 	IsActive      *bool
 	CreatedAfter  *time.Time
 	CreatedBefore *time.Time
@@ -168,6 +170,12 @@ func FindUsers(filter UserFilter) ([]models.User, int64, error) {
 
 	query := database.DB.Model(&models.User{})
 
+	if filter.Username != "" {
+		query = query.Where("username LIKE ?", "%"+filter.Username+"%")
+	}
+	if filter.Role != "" {
+		query = query.Where("role = ?", filter.Role)
+	}
 	if filter.IsActive != nil {
 		query = query.Where("is_active = ?", *filter.IsActive)
 	}

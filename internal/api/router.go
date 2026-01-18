@@ -4,6 +4,7 @@ import (
 	"aigentools-backend/config"
 	_ "aigentools-backend/docs"
 	"aigentools-backend/internal/api/test"
+	adminOrder "aigentools-backend/internal/api/v1/admin/order"
 	adminPayment "aigentools-backend/internal/api/v1/admin/payment"
 	adminTransaction "aigentools-backend/internal/api/v1/admin/transaction"
 	adminUser "aigentools-backend/internal/api/v1/admin/user"
@@ -99,6 +100,7 @@ func NewRouter() (*gin.Engine, error) {
 			adminUser.RegisterRoutes(admin)
 			adminTransaction.RegisterRoutes(admin)
 			adminPayment.RegisterRoutes(admin)
+			adminOrder.RegisterRoutes(admin)
 		}
 	}
 

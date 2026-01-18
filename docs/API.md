@@ -569,13 +569,15 @@ POST /ai-assistant/analyze
 ```json
 {
   "imageUrl": "https://example.com/image.jpg",
-  "template": "nsfw|ecommerce"
+  "template": "nsfw|ecommerce|custom",
+  "prompt": "模板ID (当 template=custom 时必填)"
 }
 ```
 
 **模板说明**:
 - `nsfw` - 生成性感风格的 AI 图像生成提示词
 - `ecommerce` - 生成电商带货视频的提示词
+- `custom` - 使用自定义模板（需提供 prompt 字段为模板ID）
 
 **响应** (200):
 ```json
@@ -587,6 +589,356 @@ POST /ai-assistant/analyze
   }
 }
 ```
+
+---
+
+### 6.2 系统提示词管理
+
+#### 创建提示词
+
+```
+POST /ai-assistant/prompts
+```
+
+**请求体**:
+```json
+{
+  "code": "unique_code",
+  "content": "提示词内容"
+}
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Prompt created successfully",
+  "data": {
+    "id": 1,
+    "code": "unique_code",
+    "content": "提示词内容",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+#### 批量创建提示词
+
+```
+POST /ai-assistant/prompts/batch
+```
+
+**请求体**:
+```json
+{
+  "prompts": [
+    {
+      "code": "code1",
+      "content": "内容1"
+    },
+    {
+      "code": "code2",
+      "content": "内容2"
+    }
+  ]
+}
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Prompts created successfully",
+  "data": null
+}
+```
+
+---
+
+#### 获取提示词
+
+```
+GET /ai-assistant/prompts/:code
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Success",
+  "data": {
+    "id": 1,
+    "code": "unique_code",
+    "content": "提示词内容",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**错误码**: 404 (提示词不存在)
+
+---
+
+#### 获取提示词列表
+
+```
+GET /ai-assistant/prompts
+```
+
+**Query 参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 10 |
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Success",
+  "data": {
+    "total": 100,
+    "items": [
+      {
+        "id": 1,
+        "code": "unique_code",
+        "content": "提示词内容",
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 更新提示词
+
+```
+PUT /ai-assistant/prompts/:code
+```
+
+**请求体**:
+```json
+{
+  "content": "新的提示词内容"
+}
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Prompt updated successfully",
+  "data": {
+    "id": 1,
+    "code": "unique_code",
+    "content": "新的提示词内容",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+#### 删除提示词
+
+```
+DELETE /ai-assistant/prompts/:code
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Prompt deleted successfully",
+  "data": null
+}
+```
+
+**错误码**: 404 (提示词不存在)
+
+---
+
+### 6.3 模板管理
+
+#### 创建模板
+
+```
+POST /ai-assistant/templates
+```
+
+**请求体**:
+```json
+{
+  "name": "模板名称",
+  "description": "模板描述 (可选)",
+  "content": "模板内容",
+  "is_public": false
+}
+```
+
+**说明**:
+- 普通用户只能创建私有模板
+- 管理员可以创建公开模板（`is_public: true`）
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Template created successfully",
+  "data": {
+    "id": 1,
+    "name": "模板名称",
+    "description": "模板描述",
+    "content": "模板内容",
+    "type": "private",
+    "user_id": 1,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**错误码**: 403 (非管理员尝试创建公开模板)
+
+---
+
+#### 获取模板列表
+
+```
+GET /ai-assistant/templates
+```
+
+**Query 参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 10 |
+| type | string | 否 | 过滤类型: `public`, `private` |
+| search | string | 否 | 按名称或内容搜索 |
+
+**说明**: 返回当前用户创建的私有模板和所有公开模板
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Success",
+  "data": {
+    "total": 100,
+    "items": [
+      {
+        "id": 1,
+        "name": "模板名称",
+        "description": "模板描述",
+        "content": "模板内容",
+        "type": "public",
+        "user_id": 0,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### 获取模板详情
+
+```
+GET /ai-assistant/templates/:id
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Success",
+  "data": {
+    "id": 1,
+    "name": "模板名称",
+    "description": "模板描述",
+    "content": "模板内容",
+    "type": "public",
+    "user_id": 0,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**错误码**: 404 (模板不存在或无权访问)
+
+---
+
+#### 更新模板
+
+```
+PUT /ai-assistant/templates/:id
+```
+
+**请求体** (所有字段可选):
+```json
+{
+  "name": "新名称",
+  "description": "新描述",
+  "content": "新内容",
+  "is_public": true
+}
+```
+
+**说明**:
+- 只能更新自己创建的模板
+- 只有管理员可以设置 `is_public: true`
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Template updated successfully",
+  "data": {
+    "id": 1,
+    "name": "新名称",
+    "description": "新描述",
+    "content": "新内容",
+    "type": "public",
+    "user_id": 1,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+**错误码**: 403 (非管理员尝试设置公开), 404 (模板不存在)
+
+---
+
+#### 删除模板
+
+```
+DELETE /ai-assistant/templates/:id
+```
+
+**说明**: 只能删除自己创建的模板
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Template deleted successfully",
+  "data": null
+}
+```
+
+**错误码**: 403 (无权删除), 404 (模板不存在)
 
 ---
 
@@ -607,6 +959,8 @@ GET /admin/users
 |------|------|------|------|
 | page | int | 否 | 页码，默认 1 |
 | limit | int | 否 | 每页数量，默认 20 |
+| username | string | 否 | 按用户名模糊搜索 |
+| role | string | 否 | 按角色过滤: `admin`, `user` |
 | is_active | bool | 否 | 按激活状态过滤 |
 | created_after | string | 否 | 创建时间起始 (RFC3339) |
 | created_before | string | 否 | 创建时间结束 (RFC3339) |
@@ -714,6 +1068,8 @@ GET /admin/transactions
 - `system_auto` - 系统自动
 - `user_consume` - 用户消费
 - `user_refund` - 用户退款
+- `user_topup` - 用户在线充值
+- `manual_topup` - 管理员手动充值
 
 **响应** (200):
 ```json
@@ -848,6 +1204,180 @@ PUT /admin/payment/config/:id
 ```
 DELETE /admin/payment/config/:id
 ```
+
+---
+
+### 7.4 订单管理
+
+#### 获取订单列表
+
+```
+GET /admin/orders
+```
+
+**Query 参数**:
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| page | int | 否 | 页码，默认 1 |
+| limit | int | 否 | 每页数量，默认 20 |
+| user_id | int | 否 | 按用户ID过滤 |
+| status | string | 否 | 按状态过滤 |
+| order_type | string | 否 | 按类型过滤 |
+| start_time | string | 否 | 开始时间 (RFC3339) |
+| end_time | string | 否 | 结束时间 (RFC3339) |
+| min_amount | float | 否 | 最小金额 |
+| max_amount | float | 否 | 最大金额 |
+
+**订单状态**:
+- `pending` - 待支付
+- `paid` - 已支付
+- `cancelled` - 已取消
+
+**订单类型**:
+- `payment` - 在线支付订单
+- `manual` - 管理员手动创建订单
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "success",
+  "data": {
+    "orders": [
+      {
+        "id": "order_abc123",
+        "user_id": 1,
+        "username": "user1",
+        "amount": 100.00,
+        "status": "pending",
+        "order_type": "manual",
+        "payment_uuid": "",
+        "external_id": "",
+        "remark": "充值优惠活动",
+        "completed_at": null,
+        "completed_by": 0,
+        "created_at": "2024-01-01T00:00:00Z",
+        "updated_at": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+#### 获取订单详情
+
+```
+GET /admin/orders/:id
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "success",
+  "data": {
+    "id": "order_abc123",
+    "user_id": 1,
+    "amount": 100.00,
+    "status": "paid",
+    "order_type": "manual",
+    "payment_uuid": "",
+    "external_id": "",
+    "remark": "充值优惠活动",
+    "completed_at": "2024-01-01T01:00:00Z",
+    "completed_by": 1,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T01:00:00Z"
+  }
+}
+```
+
+**错误码**: 404 (订单不存在)
+
+---
+
+#### 创建手动订单
+
+```
+POST /admin/orders
+```
+
+**请求体**:
+```json
+{
+  "user_id": 1,
+  "amount": 100.00,
+  "remark": "充值优惠活动 (可选)"
+}
+```
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Order created successfully",
+  "data": {
+    "id": "order_abc123",
+    "status": "pending"
+  }
+}
+```
+
+**说明**: 创建的订单状态为 `pending`，需要调用完成接口才会给用户充值
+
+---
+
+#### 完成订单
+
+```
+POST /admin/orders/:id/complete
+```
+
+**说明**:
+- 完成订单后，订单状态变为 `paid`
+- 用户余额增加订单金额
+- 创建交易记录（类型为 `manual_topup`）
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Order completed successfully",
+  "data": null
+}
+```
+
+**错误码**:
+- 404 - 订单不存在
+- 400 - 订单已支付或已取消
+
+---
+
+#### 取消订单
+
+```
+POST /admin/orders/:id/cancel
+```
+
+**说明**: 只有 `pending` 状态的订单可以取消
+
+**响应** (200):
+```json
+{
+  "status": 200,
+  "message": "Order cancelled successfully",
+  "data": null
+}
+```
+
+**错误码**:
+- 404 - 订单不存在
+- 400 - 订单状态不允许取消
 
 ---
 

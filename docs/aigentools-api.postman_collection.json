@@ -499,9 +499,248 @@
               "host": ["{{baseUrl}}"],
               "path": ["ai-assistant", "analyze"]
             },
-            "description": "分析图片并生成 AI 提示词，template 可选: nsfw, ecommerce"
+            "description": "分析图片并生成 AI 提示词，template 可选: nsfw, ecommerce, custom"
           },
           "response": []
+        },
+        {
+          "name": "Prompts - 系统提示词管理",
+          "item": [
+            {
+              "name": "创建提示词",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"unique_code\",\n  \"content\": \"提示词内容\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts"]
+                },
+                "description": "创建系统提示词"
+              },
+              "response": []
+            },
+            {
+              "name": "批量创建提示词",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prompts\": [\n    {\n      \"code\": \"code1\",\n      \"content\": \"内容1\"\n    },\n    {\n      \"code\": \"code2\",\n      \"content\": \"内容2\"\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts/batch",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts", "batch"]
+                },
+                "description": "批量创建系统提示词"
+              },
+              "response": []
+            },
+            {
+              "name": "获取提示词列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "获取系统提示词列表"
+              },
+              "response": []
+            },
+            {
+              "name": "获取提示词",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts/unique_code",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts", "unique_code"]
+                },
+                "description": "通过 code 获取提示词"
+              },
+              "response": []
+            },
+            {
+              "name": "更新提示词",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"content\": \"新的提示词内容\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts/unique_code",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts", "unique_code"]
+                },
+                "description": "更新系统提示词"
+              },
+              "response": []
+            },
+            {
+              "name": "删除提示词",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/prompts/unique_code",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "prompts", "unique_code"]
+                },
+                "description": "删除系统提示词"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Templates - 模板管理",
+          "item": [
+            {
+              "name": "创建模板",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"模板名称\",\n  \"description\": \"模板描述\",\n  \"content\": \"模板内容\",\n  \"is_public\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/templates",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "templates"]
+                },
+                "description": "创建提示词模板（需要认证，管理员可创建公开模板）"
+              },
+              "response": []
+            },
+            {
+              "name": "获取模板列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/templates?page=1&limit=10&type=public&search=",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "templates"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "type",
+                      "value": "public",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "获取模板列表（返回公开模板和用户私有模板）"
+              },
+              "response": []
+            },
+            {
+              "name": "获取模板详情",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/templates/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "templates", "1"]
+                },
+                "description": "获取模板详情"
+              },
+              "response": []
+            },
+            {
+              "name": "更新模板",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"新名称\",\n  \"description\": \"新描述\",\n  \"content\": \"新内容\",\n  \"is_public\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/templates/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "templates", "1"]
+                },
+                "description": "更新模板（只能更新自己的模板）"
+              },
+              "response": []
+            },
+            {
+              "name": "删除模板",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/ai-assistant/templates/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["ai-assistant", "templates", "1"]
+                },
+                "description": "删除模板（只能删除自己的模板）"
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -530,6 +769,16 @@
                       "value": "20"
                     },
                     {
+                      "key": "username",
+                      "value": "liuke",
+                      "disabled": true
+                    },
+                    {
+                      "key": "role",
+                      "value": "user",
+                      "disabled": true
+                    },
+                    {
                       "key": "is_active",
                       "value": "true",
                       "disabled": true
@@ -546,7 +795,7 @@
                     }
                   ]
                 },
-                "description": "获取用户列表（仅管理员）"
+                "description": "获取用户列表，支持按用户名模糊搜索和角色筛选（仅管理员）"
               },
               "response": []
             },
@@ -781,6 +1030,135 @@
                   "path": ["admin", "payment", "config", "1"]
                 },
                 "description": "删除支付配置（仅管理员）"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Orders - 订单管理",
+          "item": [
+            {
+              "name": "获取订单列表",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/orders?page=1&limit=20&status=pending&order_type=manual",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "orders"],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "20"
+                    },
+                    {
+                      "key": "user_id",
+                      "value": "1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "pending",
+                      "disabled": true
+                    },
+                    {
+                      "key": "order_type",
+                      "value": "manual",
+                      "disabled": true
+                    },
+                    {
+                      "key": "start_time",
+                      "value": "2024-01-01T00:00:00Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "end_time",
+                      "value": "2024-12-31T23:59:59Z",
+                      "disabled": true
+                    },
+                    {
+                      "key": "min_amount",
+                      "value": "10",
+                      "disabled": true
+                    },
+                    {
+                      "key": "max_amount",
+                      "value": "1000",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "获取订单列表，支持多条件筛选（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "获取订单详情",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/orders/order_abc123",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "orders", "order_abc123"]
+                },
+                "description": "获取订单详情（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "创建手动订单",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": 1,\n  \"amount\": 100.00,\n  \"remark\": \"充值优惠活动\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/admin/orders",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "orders"]
+                },
+                "description": "创建手动充值订单（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "完成订单",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/orders/order_abc123/complete",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "orders", "order_abc123", "complete"]
+                },
+                "description": "完成订单，用户余额增加（仅管理员）"
+              },
+              "response": []
+            },
+            {
+              "name": "取消订单",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/orders/order_abc123/cancel",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["admin", "orders", "order_abc123", "cancel"]
+                },
+                "description": "取消待支付订单（仅管理员）"
               },
               "response": []
             }

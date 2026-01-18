@@ -15,6 +15,8 @@ const (
 	TransactionTypeSystemAuto  TransactionType = "system_auto"
 	TransactionTypeUserConsume TransactionType = "user_consume"
 	TransactionTypeUserRefund  TransactionType = "user_refund"
+	TransactionTypeUserTopup   TransactionType = "user_topup"   // 用户在线充值
+	TransactionTypeManualTopup TransactionType = "manual_topup" // 管理员手动充值
 )
 
 type Transaction struct {

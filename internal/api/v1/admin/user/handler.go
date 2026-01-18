@@ -40,6 +40,8 @@ type UserListResponse struct {
 // @Security Bearer
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Items per page" default(20)
+// @Param username query string false "Filter by username (fuzzy search)"
+// @Param role query string false "Filter by role (admin or user)"
 // @Param is_active query bool false "Filter by active status"
 // @Param created_after query string false "Filter by creation time (start) - RFC3339"
 // @Param created_before query string false "Filter by creation time (end) - RFC3339"
@@ -66,8 +68,10 @@ func ListUsers(c *gin.Context) {
 	}
 
 	filter := services.UserFilter{
-		Page:  page,
-		Limit: limit,
+		Username: c.Query("username"),
+		Role:     c.Query("role"),
+		Page:     page,
+		Limit:    limit,
 	}
 
 	if isActiveStr, exists := c.GetQuery("is_active"); exists {
@@ -103,7 +107,7 @@ func ListUsers(c *gin.Context) {
 		return
 	}
 
-	var userItems []UserListItem
+	userItems := make([]UserListItem, 0)
 	for _, u := range users {
 		userItems = append(userItems, UserListItem{
 			ID:            u.ID,
